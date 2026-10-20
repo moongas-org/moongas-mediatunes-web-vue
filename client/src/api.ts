@@ -1,6 +1,7 @@
 import type { LocationQuery } from 'vue-router'
 import type {
   AlbumInfo,
+  AlbumMetadata,
   ArtistCount,
   ArtistInfo,
   GeoCountItem,
@@ -47,10 +48,10 @@ function apiUrl(path: string): string {
   return `${BASE}api${path.startsWith('/') ? path : `/${path}`}`
 }
 
-async function fetchJson<T>(path: string, query?: LocationQuery): Promise<T> {
+async function fetchJson<T>(path: string, query?: LocationQuery, signal?: AbortSignal): Promise<T> {
   const qs = query ? buildSearchParams(query).toString() : ''
   const url = qs ? `${apiUrl(path)}?${qs}` : apiUrl(path)
-  const resp = await fetch(url)
+  const resp = await fetch(url, { signal })
   if (!resp.ok) {
     throw new Error(`GET ${url} failed: ${resp.status} ${resp.statusText}`)
   }
@@ -85,6 +86,9 @@ export const api = {
 
   albums: (query: LocationQuery) =>
     fetchJson<{ albums: AlbumInfo[] }>('/albums', query),
+
+  album: (query: LocationQuery, signal?: AbortSignal) =>
+    fetchJson<{ album: AlbumMetadata }>('/album', query, signal),
 
   tracks: (query: LocationQuery) =>
     fetchJson<{ files: MediaFile[]; coverPath: string }>('/tracks', query),

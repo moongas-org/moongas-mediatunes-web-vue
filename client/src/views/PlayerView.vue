@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { api, getfileUrl } from '../api'
+import AlbumCover from '../components/AlbumCover.vue'
 import { configState } from '../configStore'
 import { GENRES } from '../data/genres'
 import HintsPanel from '../components/HintsPanel.vue'
@@ -57,6 +58,7 @@ const filterFields: FilterField[] = [
   { key: 'album', label: 'album', multi: true },
   { key: 'title', label: 'title' },
   { key: 'genre', label: 'genre', multi: true, options: GENRES },
+  { key: 'explicitCover', label: 'explicit cover', options: ['true', 'false'] },
   { key: 'year', label: 'year', multi: true, type: 'number' },
   { key: 'minYear', label: 'min year', type: 'number' },
   { key: 'maxYear', label: 'max year', type: 'number' },
@@ -81,7 +83,6 @@ watch(() => route.query, () => loadTrack(false), { immediate: true })
 const audioSrc = computed(() =>
   track.value && localEnabled.value ? getfileUrl(track.value.path) : undefined,
 )
-const coverSrc = computed(() => (track.value ? getfileUrl(track.value.coverPath) : '#'))
 
 /**
  * Lyrics live alongside the media file with ".txt" / ".lrc" extensions.
@@ -192,16 +193,17 @@ function onCanPlayThrough(): void {
       class="player-cover"
       :class="{ 'info-minimized': trackInfoMinimized }"
     >
-      <button
-        type="button"
+      <AlbumCover
+        :cover-path="track.coverPath"
+        :query="{ artist: track.artist, album: track.album, title: track.title, year: String(track.year) }"
+        :alt="`${track.album} album cover`"
+        id="coverImg"
         class="cover-toggle"
-        aria-label="Minimize track info"
+        action-label="Minimize track info"
         aria-controls="coverTrackInfo"
         :aria-expanded="!trackInfoMinimized"
-        @click="trackInfoMinimized = true"
-      >
-        <img :src="coverSrc" id="coverImg" :alt="`${track.album} album cover`" width="1000" height="1000" />
-      </button>
+        @activate="trackInfoMinimized = true"
+      />
       <div id="coverTrackInfo" class="cover-info" :inert="trackInfoMinimized">
         <table class="playback-options track-info">
           <tr>

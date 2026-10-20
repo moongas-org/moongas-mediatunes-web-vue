@@ -15,6 +15,7 @@ const FILTER_KEYS = [
   'albumartist',
   'album',
   'genre',
+  'explicitCover',
   'year',
   'minYear',
   'maxYear',

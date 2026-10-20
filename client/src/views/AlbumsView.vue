@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { api, getfileUrl } from '../api'
+import { api } from '../api'
+import AlbumCover from '../components/AlbumCover.vue'
 import QueryFilters from '../components/QueryFilters.vue'
 import { useGeoFilterFields } from '../data/geoFilters'
 import { configState } from '../configStore'
@@ -16,18 +17,25 @@ const route = useRoute()
 const albums = ref<AlbumInfo[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
+const activeCoverIndex = ref(0)
+let listRequestId = 0
 
 async function load(): Promise<void> {
+  const requestId = ++listRequestId
   loading.value = true
   error.value = null
+  albums.value = []
+  activeCoverIndex.value = 0
   try {
     const data = await api.albums(route.query)
+    if (requestId !== listRequestId) return
     albums.value = data.albums
   } catch (e) {
+    if (requestId !== listRequestId) return
     error.value = e instanceof Error ? e.message : String(e)
     albums.value = []
   } finally {
-    loading.value = false
+    if (requestId === listRequestId) loading.value = false
   }
 }
 
@@ -36,6 +44,7 @@ watch(() => route.query, load, { immediate: true })
 const filterFields: FilterField[] = [
   { key: 'artist', label: 'artist', multi: true },
   { key: 'genre', label: 'genre', multi: true, options: GENRES },
+  { key: 'explicitCover', label: 'explicit cover', options: ['true', 'false'] },
   { key: 'year', label: 'year', multi: true, type: 'number' },
   { key: 'minYear', label: 'min year', type: 'number' },
   { key: 'maxYear', label: 'max year', type: 'number' },
@@ -98,23 +107,22 @@ const showCaptions = ref(true)
     <div v-if="error" class="error">{{ error }}</div>
     <LoadingSpinner v-else-if="loading" />
     <div id="trackList" :style="{ '--columns': columns }">
-      <router-link
-        v-for="album in albums"
+      <AlbumCover
+        v-for="(album, index) in albums"
         :key="`${album.artist}|${album.album}|${album.year}`"
         class="album-tile"
+        :enabled="index <= activeCoverIndex"
+        @settled="activeCoverIndex === index && activeCoverIndex++"
+        :cover-path="album.coverPath"
+        :query="{ albumartist: album.artist, album: album.album, year: String(album.year) }"
+        :alt="`${album.album} album cover`"
         :to="{
           path: '/tracks',
           query: { albumartist: album.artist, album: album.album, year: String(album.year) },
         }"
       >
-        <img
-          :src="getfileUrl(album.coverPath)"
-          class="cover-img"
-          width="1000"
-          height="1000"
-        />
         <span v-if="showCaptions" class="album-caption">{{ album.artist }} - {{ album.album }} [{{ album.year }}]</span>
-      </router-link>
+      </AlbumCover>
     </div>
   </div>
 </template>
@@ -145,16 +153,6 @@ const showCaptions = ref(true)
   opacity: 0.4;
   cursor: default;
   background-color: #333;
-}
-
-/* Size to the grid cell instead of the fixed global .cover-img widths. */
-.album-tile .cover-img {
-  display: block;
-  float: none;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 1;
-  object-fit: cover;
 }
 
 .album-caption {

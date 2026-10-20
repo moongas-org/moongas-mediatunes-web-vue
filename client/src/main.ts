@@ -10,7 +10,7 @@ const app = createApp(App)
 app.use(router)
 
 // Load the server config before mounting so views can rely on it
-// (playback methods, age verification, limits).
+// (playback methods, limits).
 ensureConfigLoaded().finally(() => {
   app.mount('#app')
 })

@@ -87,7 +87,38 @@ The web UI is a single-page application built with [Deno](https://deno.com/), [V
 - `client/` — the Vue SPA (all TypeScript; uses npm `d3` + `d3-cloud` for the word clouds). Routes mirror the API paths (`/albums`, `/tracks`, `/artists`, `/player`, `/genres-cloud`, etc.).
 - `server/main.ts` — plain `Deno.serve` production server: serves the Vite build from `client/dist`, proxies `/api/*` and `/getfile/*` to the backend, and falls back to `index.html` for client-side routes.
 
-The SPA consumes a JSON API (`<base>/api/config`, `<base>/api/albums`, `<base>/api/tracks`, `<base>/api/artists`, `<base>/api/artist`, `<base>/api/genres`, `<base>/api/artist-geo/<kind>`, `<base>/api/wordcloud/*`, `<base>/api/random-track`) and media files via `<base>/getfile/*`, where `<base>` is the public base path (default `/mediatunes`, matching the Vite `base`). The frontend strips the base prefix and proxies both to the mediatunes-svc backend at `BACKEND_URL` (default `http://127.0.0.1:5000`); the JSON API is served under `BACKEND_URL_PREFIX` (default `/api`) while media files are served at the backend root (`/getfile/<path>`, no prefix). In production, nginx routes all `/mediatunes/*` traffic (including `/mediatunes/api/*` and `/mediatunes/getfile/*`) to this frontend server.
+The SPA consumes a JSON API (`<base>/api/config`, `<base>/api/albums`, `<base>/api/album`, `<base>/api/tracks`, `<base>/api/artists`, `<base>/api/artist`, `<base>/api/genres`, `<base>/api/artist-geo/<kind>`, `<base>/api/wordcloud/*`, `<base>/api/random-track`) and media files via `<base>/getfile/*`, where `<base>` is the public base path (default `/mediatunes`, matching the Vite `base`). The frontend strips the base prefix and proxies both to the mediatunes-svc backend at `BACKEND_URL` (default `http://127.0.0.1:5000`); the JSON API is served under `BACKEND_URL_PREFIX` (default `/api`) while media files are served at the backend root (`/getfile/<path>`, no prefix). In production, nginx routes all `/mediatunes/*` traffic (including `/mediatunes/api/*` and `/mediatunes/getfile/*`) to this frontend server.
+
+### Explicit album covers and age verification
+
+The albums, player, and name-that-tune views offer an **explicit cover** filter
+with `true` and `false` choices. The `explicitCover=true` URL parameter includes
+only albums marked explicit; `explicitCover=false` excludes those albums.
+Removing the filter includes both. Filtering is performed by the backend using
+album metadata, before result limits or random-track selection, and is independent
+of age verification. It requires backend support for the `explicitCover` query
+parameter on both `/api/albums` and `/api/random-track`.
+
+Album grids, the player (including "name that tune"), and track listings fetch
+`<base>/api/album` metadata and blur covers marked `explicitCover: true` unless
+the `ageConfirmed=true` cookie is present. Image space is reserved while each image
+and its metadata load; artwork is shown only once its blur state is determined.
+If metadata fails, the image is displayed blurred unless age is already verified;
+failures are logged and shown in the cover's tooltip.
+The album grid loads covers sequentially in display order: download one image,
+fetch its album metadata, and display it with the appropriate blur before starting
+the next image. Failed images or metadata requests do not block subsequent covers.
+This requires a backend and scanned library that support the album metadata endpoint.
+
+The age-verification dialog never opens automatically, regardless of the backend's
+`ageVerification` setting. Clicking or keyboard-activating a blurred cover opens
+the dialog instead of navigating to tracks or minimizing player details.
+Cancel dismisses it without revealing the cover; declining still exits the site.
+Accepting sets this cookie for
+one year, scoped to the app's base path, with `SameSite=Lax` and `Secure` on HTTPS.
+Existing local-storage confirmations are not used in place of the cookie.
+The explicit-cover blur applies regardless of the backend's age-verification setting.
+This is a visual content warning, not access control for the underlying media files.
 
 ### Runtimes
 

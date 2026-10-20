@@ -26,6 +26,14 @@ export interface AlbumInfo {
   coverPath: string
 }
 
+export interface AlbumMetadata {
+  id: number
+  path: string
+  name: string
+  year: number
+  explicitCover: boolean
+}
+
 export interface ArtistCount {
   name: string
   count: number

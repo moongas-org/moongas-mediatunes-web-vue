@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, type LocationQueryRaw } from 'vue-router'
-import { api, getfileUrl } from '../api'
+import { api } from '../api'
+import AlbumCover from '../components/AlbumCover.vue'
 import QueryFilters from '../components/QueryFilters.vue'
 import { useGeoFilterFields } from '../data/geoFilters'
 import { configState } from '../configStore'
@@ -84,7 +85,13 @@ const singleAlbum = computed<{ artist: string; album: string } | null>(() => {
     <template v-else>
       <div v-if="albumParam.length > 0 && coverPath.length > 0">
         <br />
-        <img :src="getfileUrl(coverPath)" id="coverImg" class="cover-img single-img" width="1000" height="1000" />
+        <AlbumCover
+          :cover-path="coverPath"
+          :query="route.query"
+          :alt="`${albumParam[0]} album cover`"
+          id="coverImg"
+          class="cover-img single-img"
+        />
       </div>
       <div v-if="albumParam.length > 0 && shuffleAlbumQuery">
         <router-link class="navLink" :to="{ path: '/player', query: shuffleAlbumQuery }">Shuffle Album <i>{{
