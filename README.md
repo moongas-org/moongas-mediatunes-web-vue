@@ -101,9 +101,10 @@ parameter on both `/api/albums` and `/api/random-track`.
 
 Album grids, the player (including "name that tune"), and track listings fetch
 `<base>/api/album` metadata and blur covers marked `explicitCover: true` unless
-the `ageConfirmed=true` cookie is present. Image space is reserved while each image
+the user has revealed that cover, or both age verification and automatic unblurring
+are remembered. Image space is reserved while each image
 and its metadata load; artwork is shown only once its blur state is determined.
-If metadata fails, the image is displayed blurred unless age is already verified;
+If metadata fails, the image follows the same blur and reveal rules;
 failures are logged and shown in the cover's tooltip.
 The album grid loads covers sequentially in display order: download one image,
 fetch its album metadata, and display it with the appropriate blur before starting
@@ -114,8 +115,20 @@ The age-verification dialog never opens automatically, regardless of the backend
 `ageVerification` setting. Clicking or keyboard-activating a blurred cover opens
 the dialog instead of navigating to tracks or minimizing player details.
 Cancel dismisses it without revealing the cover; declining still exits the site.
-Accepting sets this cookie for
-one year, scoped to the app's base path, with `SameSite=Lax` and `Secure` on HTTPS.
+Clicking **Yes, I am 18+** saves `ageConfirmed=true` and opens a second dialog
+with an **Automatically unblur explicit album covers** checkbox (unchecked by
+default) and an **Unblur** button. Age verification alone does not reveal any art.
+
+Clicking **Unblur** with the checkbox unchecked reveals only the clicked cover.
+Other covers remain blurred, and individual reveals are not persisted: covers
+are blurred again after a reload or when the displayed album changes.
+Subsequent blurred-cover clicks skip the age question and open the second dialog
+directly, including after a reload. Checking the box and clicking **Unblur**
+reveals all explicit covers and remembers automatic unblurring across reloads.
+The `autoUnblurExplicitCovers` cookie stores the checkbox choice independently
+of age verification; existing age cookies without this preference do not enable it.
+Both cookies last one year, are scoped to the app's base path, and use
+`SameSite=Lax` and `Secure` on HTTPS.
 Existing local-storage confirmations are not used in place of the cookie.
 The explicit-cover blur applies regardless of the backend's age-verification setting.
 This is a visual content warning, not access control for the underlying media files.

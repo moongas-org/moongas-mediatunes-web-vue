@@ -2,7 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { RouterLink, type LocationQuery, type RouteLocationRaw } from 'vue-router'
 import { api, buildSearchParams, getfileUrl } from '../api'
-import { ageConfirmed, requestAgeVerification } from '../ageVerificationStore'
+import { ageConfirmed, automaticallyUnblur, requestAgeVerification } from '../ageVerificationStore'
 
 const props = withDefaults(defineProps<{
   coverPath: string
@@ -17,17 +17,26 @@ const emit = defineEmits<{ activate: []; settled: [] }>()
 const explicitCover = ref<boolean | null>(null)
 const error = ref<string | null>(null)
 const ready = ref(false)
+const revealed = ref(false)
 const requestKey = computed(() => JSON.stringify([props.coverPath, buildSearchParams(props.query).toString()]))
 let controller: AbortController | undefined
 let metadataStarted = false
-const blurred = computed(() => !ageConfirmed.value && explicitCover.value !== false)
-const title = computed(() => error.value ?? (blurred.value ? 'Verify your age to reveal album art.' : undefined))
+const blurred = computed(() =>
+  explicitCover.value !== false && !revealed.value && !(ageConfirmed.value && automaticallyUnblur.value),
+)
+const revealLabel = computed(() => ageConfirmed.value ? 'Unblur' : 'Verify your age to reveal')
+const title = computed(() => error.value ?? (blurred.value ? `${revealLabel.value} album art.` : undefined))
 
 function verifyIfBlurred(event: MouseEvent): void {
   if (!ready.value || blurred.value) {
     event.preventDefault()
     event.stopPropagation()
-    if (ready.value) requestAgeVerification()
+    if (ready.value) {
+      const currentController = controller
+      requestAgeVerification(() => {
+        if (currentController && !currentController.signal.aborted) revealed.value = true
+      })
+    }
   }
 }
 
@@ -40,6 +49,7 @@ watch(
     explicitCover.value = null
     error.value = null
     ready.value = false
+    revealed.value = false
     metadataStarted = false
   },
   { immediate: true },
@@ -91,7 +101,7 @@ async function onImageFinished(event: Event): Promise<void> {
     :type="to ? undefined : 'button'"
     class="album-cover"
     :title="title"
-    :aria-label="blurred ? `Verify your age to reveal ${alt}` : (actionLabel ?? alt)"
+    :aria-label="blurred ? `${revealLabel} ${alt}` : (actionLabel ?? alt)"
     :aria-haspopup="blurred ? 'dialog' : undefined"
     :aria-busy="!ready"
     @click.capture="verifyIfBlurred"
