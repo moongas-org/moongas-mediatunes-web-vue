@@ -64,6 +64,12 @@ const shuffleAlbumQuery = computed<LocationQueryRaw | null>(() => {
   return null
 })
 
+/** True when every listed track belongs to the same album, so its cover (and metadata) applies. */
+const isSingleAlbum = computed(() => {
+  const albums = new Set(files.value.map((f) => JSON.stringify([f.albumartist || f.artist, f.album])))
+  return albums.size === 1
+})
+
 /** Artist/album for the single album shown (falls back to the listed tracks' artist). */
 const singleAlbum = computed<{ artist: string; album: string } | null>(() => {
   const album = albumParam.value[0]
@@ -83,7 +89,7 @@ const singleAlbum = computed<{ artist: string; album: string } | null>(() => {
     <div v-if="error" class="error">{{ error }}</div>
     <LoadingSpinner v-else-if="loading" />
     <template v-else>
-      <div v-if="albumParam.length > 0 && coverPath.length > 0">
+      <div v-if="albumParam.length > 0 && coverPath.length > 0 && isSingleAlbum">
         <br />
         <AlbumCover
           :cover-path="coverPath"

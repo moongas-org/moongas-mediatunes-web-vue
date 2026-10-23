@@ -56,6 +56,11 @@ function contentType(path: string): string {
   return MIME_TYPES[path.slice(idx).toLowerCase()] ?? "application/octet-stream";
 }
 
+// Vite emits content-hashed filenames under assets/, so they never change in place.
+function cacheControl(rel: string): string {
+  return rel.startsWith("assets/") ? "public, max-age=31536000, immutable" : "no-cache";
+}
+
 const HOP_BY_HOP_HEADERS = [
   "connection",
   "keep-alive",
@@ -108,7 +113,7 @@ async function serveStatic(pathname: string): Promise<Response | null> {
     if (!stat.isFile) return null;
     const body = await Deno.readFile(fileUrl);
     return new Response(body, {
-      headers: { "content-type": contentType(rel) },
+      headers: { "content-type": contentType(rel), "cache-control": cacheControl(rel) },
     });
   } catch {
     return null;
@@ -119,7 +124,7 @@ async function serveIndex(): Promise<Response> {
   try {
     const body = await Deno.readFile(new URL("index.html", DIST_DIR));
     return new Response(body, {
-      headers: { "content-type": "text/html; charset=utf-8" },
+      headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" },
     });
   } catch {
     return new Response(

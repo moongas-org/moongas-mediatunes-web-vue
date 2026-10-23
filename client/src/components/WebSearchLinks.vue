@@ -13,7 +13,7 @@ import deezerLogoUrl from '../assets/svg/Deezer_logo.svg'
 import bandcampLogoUrl from '../assets/svg/Bandcamp_logo.svg'
 import discogsLogoUrl from '../assets/svg/Discogs_logo.svg'
 import musicBrainzLogoUrl from '../assets/svg/MusicBrainz_logo.svg'
-import wikipediaLogoUrl from '../assets/svg/Wikipedia_logo.svg'
+import wikipediaLogoUrl from '../assets/png/Wikipedia_logo.png'
 import soundcloudLogoUrl from '../assets/svg/SoundCloud_logo.svg'
 import lastFmLogoUrl from '../assets/svg/Lastfm_logo.svg'
 
