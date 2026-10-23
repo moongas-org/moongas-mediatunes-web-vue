@@ -146,3 +146,11 @@ const singleAlbum = computed<{ artist: string; album: string } | null>(() => {
     </template>
   </div>
 </template>
+
+<style scoped>
+#coverImg {
+  margin-inline: auto;
+  max-width: 100%;
+  height: auto;
+}
+</style>
