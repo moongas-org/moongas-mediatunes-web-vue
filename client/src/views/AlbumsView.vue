@@ -17,7 +17,8 @@ const route = useRoute()
 const albums = ref<AlbumInfo[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
-const activeCoverIndex = ref(0)
+const COVER_CONCURRENCY = 6
+const enabledCoverCount = ref(COVER_CONCURRENCY)
 let listRequestId = 0
 
 async function load(): Promise<void> {
@@ -25,7 +26,7 @@ async function load(): Promise<void> {
   loading.value = true
   error.value = null
   albums.value = []
-  activeCoverIndex.value = 0
+  enabledCoverCount.value = COVER_CONCURRENCY
   try {
     const data = await api.albums(route.query)
     if (requestId !== listRequestId) return
@@ -43,6 +44,7 @@ watch(() => route.query, load, { immediate: true })
 
 const filterFields: FilterField[] = [
   { key: 'artist', label: 'artist', multi: true },
+  { key: 'album', label: 'album', multi: true },
   { key: 'genre', label: 'genre', multi: true, options: GENRES },
   { key: 'explicitCover', label: 'explicit cover', options: ['true', 'false'] },
   { key: 'year', label: 'year', multi: true, type: 'number' },
@@ -111,9 +113,10 @@ const showCaptions = ref(true)
         v-for="(album, index) in albums"
         :key="`${album.artist}|${album.album}|${album.year}`"
         class="album-tile"
-        :enabled="index <= activeCoverIndex"
-        @settled="activeCoverIndex === index && activeCoverIndex++"
+        :enabled="index < enabledCoverCount"
+        @settled="enabledCoverCount++"
         :cover-path="album.coverPath"
+        :explicit-cover="album.explicitCover"
         :query="{ albumartist: album.artist, album: album.album, year: String(album.year) }"
         :alt="`${album.album} album cover`"
         :to="{

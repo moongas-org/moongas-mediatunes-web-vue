@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory, type NavigationGuardWithThis } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 
 const AlbumsView = () => import('./views/AlbumsView.vue')
 const ArtistsView = () => import('./views/ArtistsView.vue')
@@ -9,30 +9,6 @@ const GenreView = () => import('./views/GenreView.vue')
 const TracksView = () => import('./views/TracksView.vue')
 const PlayerView = () => import('./views/PlayerView.vue')
 const WordCloudView = () => import('./views/WordCloudView.vue')
-
-const FILTER_KEYS = [
-  'artist',
-  'albumartist',
-  'album',
-  'genre',
-  'explicitCover',
-  'year',
-  'minYear',
-  'maxYear',
-  'countryCode',
-  'regionCode',
-  'city',
-  'languageCode',
-]
-
-/**
- * Adds minYear=1988 and maxYear=1994 when no filter params are given. beforeEnter doesn't
- * re-run on query-only changes, so removing all filters in-page sticks.
- */
-const defaultMinYear: NavigationGuardWithThis<undefined> = (to) => {
-  if (FILTER_KEYS.some((k) => k in to.query)) return
-  return { path: to.path, query: { ...to.query, minYear: '1988', maxYear: '1994' }, hash: to.hash }
-}
 
 /**
  * Route meta:
@@ -45,15 +21,14 @@ export const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', name: 'root', redirect: (to) => ({ path: '/albums', query: to.query, hash: to.hash }) },
-    { path: '/albums', name: 'albums', component: AlbumsView, beforeEnter: defaultMinYear },
+    { path: '/albums', name: 'albums', component: AlbumsView },
     {
       path: '/tracks',
       name: 'tracks',
       component: TracksView,
       meta: { noYears: true },
-      beforeEnter: defaultMinYear,
     },
-    { path: '/artists', name: 'artists', component: ArtistsView, beforeEnter: defaultMinYear },
+    { path: '/artists', name: 'artists', component: ArtistsView },
     { path: '/artist', name: 'artist', component: ArtistView },
     { path: '/genres', name: 'genres', component: GenresView },
     { path: '/genre', name: 'genre', component: GenreView },

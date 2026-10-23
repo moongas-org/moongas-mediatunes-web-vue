@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink, type LocationQuery, type RouteLocationRaw } from 'vue-router'
 import { api, buildSearchParams, getfileUrl } from '../api'
 import { ageConfirmed, automaticallyUnblur, requestAgeVerification } from '../ageVerificationStore'
@@ -11,18 +11,22 @@ const props = withDefaults(defineProps<{
   to?: RouteLocationRaw
   actionLabel?: string
   enabled?: boolean
-}>(), { enabled: true })
+  explicitCover?: boolean
+}>(), { enabled: true, explicitCover: undefined })
 
 const emit = defineEmits<{ activate: []; settled: [] }>()
 const explicitCover = ref<boolean | null>(null)
 const error = ref<string | null>(null)
-const ready = ref(false)
+const imageFinished = ref(false)
+const metadataFinished = ref(false)
+const ready = computed(() => imageFinished.value && metadataFinished.value)
 const revealed = ref(false)
-const requestKey = computed(() => JSON.stringify([props.coverPath, buildSearchParams(props.query).toString()]))
+const requestKey = computed(() => JSON.stringify([
+  props.coverPath, buildSearchParams(props.query).toString(), props.explicitCover,
+]))
 let controller: AbortController | undefined
-let metadataStarted = false
 const blurred = computed(() =>
-  explicitCover.value !== false && !revealed.value && !(ageConfirmed.value && automaticallyUnblur.value),
+  explicitCover.value === true && !revealed.value && !(ageConfirmed.value && automaticallyUnblur.value),
 )
 const revealLabel = computed(() => ageConfirmed.value ? 'Unblur' : 'Verify your age to reveal')
 const title = computed(() => error.value ?? (blurred.value ? `${revealLabel.value} album art.` : undefined))
@@ -42,20 +46,43 @@ function verifyIfBlurred(event: MouseEvent): void {
 
 watch(
   [() => props.enabled, requestKey],
-  (_, __, onCleanup) => {
+  async (_, __, onCleanup) => {
     controller = props.enabled ? new AbortController() : undefined
     const currentController = controller
     onCleanup(() => { currentController?.abort() })
     explicitCover.value = null
     error.value = null
-    ready.value = false
+    imageFinished.value = false
+    metadataFinished.value = false
     revealed.value = false
-    metadataStarted = false
+    if (!currentController) return
+    if (typeof props.explicitCover === 'boolean') {
+      explicitCover.value = props.explicitCover
+      metadataFinished.value = true
+      return
+    }
+    try {
+      const data = await api.album(props.query, currentController.signal)
+      if (typeof data.album.explicitCover !== 'boolean') {
+        throw new Error('Album metadata is missing the explicitCover flag.')
+      }
+      if (currentController.signal.aborted) return
+      explicitCover.value = data.album.explicitCover
+    } catch (e) {
+      if (currentController.signal.aborted) return
+      error.value = `Failed to load album cover metadata. ${e instanceof Error ? e.message : String(e)}`
+      console.error(error.value)
+    }
+    if (!currentController.signal.aborted) metadataFinished.value = true
   },
   { immediate: true },
 )
 
-async function onImageFinished(event: Event): Promise<void> {
+watch(ready, (value) => {
+  if (value) emit('settled')
+})
+
+function onImageFinished(event: Event): void {
   const image = event.currentTarget
   const currentController = controller
   if (
@@ -63,34 +90,13 @@ async function onImageFinished(event: Event): Promise<void> {
     image.dataset.requestKey !== requestKey.value ||
     !currentController ||
     currentController.signal.aborted ||
-    metadataStarted
+    imageFinished.value
   ) return
-  metadataStarted = true
   if (event.type === 'error') {
     error.value = `Failed to load album cover image: ${image.src}`
     console.error(error.value)
   }
-  try {
-    const data = await api.album(props.query, currentController.signal)
-    if (typeof data.album.explicitCover !== 'boolean') {
-      throw new Error('Album metadata is missing the explicitCover flag.')
-    }
-    if (currentController.signal.aborted) return
-    explicitCover.value = data.album.explicitCover
-  } catch (e) {
-    if (currentController.signal.aborted) return
-    error.value = `Failed to load album cover metadata. ${e instanceof Error ? e.message : String(e)}`
-    console.error(error.value)
-  }
-  if (currentController.signal.aborted) return
-  ready.value = true
-  await nextTick()
-  // Give the completed cover a paint before the grid starts the next download.
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      if (!currentController.signal.aborted) emit('settled')
-    })
-  })
+  imageFinished.value = true
 }
 </script>
 

@@ -99,17 +99,23 @@ album metadata, before result limits or random-track selection, and is independe
 of age verification. It requires backend support for the `explicitCover` query
 parameter on both `/api/albums` and `/api/random-track`.
 
-Album grids, the player (including "name that tune"), and track listings fetch
-`<base>/api/album` metadata and blur covers marked `explicitCover: true` unless
+Album grids require the boolean `explicitCover` field on each
+`<base>/api/albums` result and do not need per-cover metadata requests.
+The player (including "name that tune") and track listings fetch
+`<base>/api/album` metadata.
+Covers marked `explicitCover: true` are blurred unless
 the user has revealed that cover, or both age verification and automatic unblurring
 are remembered. Image space is reserved while each image
 and its metadata load; artwork is shown only once its blur state is determined.
-If metadata fails, the image follows the same blur and reveal rules;
-failures are logged and shown in the cover's tooltip.
-The album grid loads covers sequentially in display order: download one image,
-fetch its album metadata, and display it with the appropriate blur before starting
-the next image. Failed images or metadata requests do not block subsequent covers.
-This requires a backend and scanned library that support the album metadata endpoint.
+The blur filter is applied only when `explicitCover` is exactly `true`, never
+while metadata is pending or for non-explicit covers. If metadata fails, the
+image is shown without blur; failures are logged and shown in the cover's tooltip.
+The album grid starts covers in display order with up to six covers loading
+concurrently. Image downloads and any required metadata requests run in parallel;
+each completed cover starts the next without waiting for animation frames.
+Failed images or metadata requests release their loading slot.
+Backends must provide the list's boolean `explicitCover` field and the album
+metadata endpoint for player and track views.
 
 The age-verification dialog never opens automatically, regardless of the backend's
 `ageVerification` setting. Clicking or keyboard-activating a blurred cover opens

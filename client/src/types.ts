@@ -24,6 +24,7 @@ export interface AlbumInfo {
   album: string
   year: number
   coverPath: string
+  explicitCover: boolean
 }
 
 export interface AlbumMetadata {

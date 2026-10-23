@@ -38,6 +38,7 @@ const maxResults = computed(() => configState.config?.maxResults ?? 50000)
 
 // Matches the params preserved by sortQuery().
 const filterFields: FilterField[] = [
+  { key: 'artist', label: 'artist', multi: true },
   { key: 'genre', label: 'genre', multi: true, options: GENRES },
   { key: 'year', label: 'year', multi: true, type: 'number' },
   { key: 'minYear', label: 'min year', type: 'number' },
@@ -51,6 +52,7 @@ const filterFields: FilterField[] = [
  */
 function sortQuery(sort: string): LocationQueryRaw {
   return {
+    artist: queryList(route.query, 'artist'),
     genre: queryList(route.query, 'genre'),
     year: queryList(route.query, 'year'),
     minYear: queryScalar(route.query, 'minYear') ?? undefined,
