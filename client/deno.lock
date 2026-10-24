@@ -3,10 +3,12 @@
   "specifiers": {
     "npm:@types/d3-cloud@^1.2.9": "1.2.9",
     "npm:@types/d3@^7.4.3": "7.4.3",
+    "npm:@types/howler@^2.2.12": "2.2.13",
     "npm:@types/node@24": "24.11.0",
     "npm:@vitejs/plugin-vue@^5.2.1": "5.2.4_vite@6.4.3__@types+node@24.11.0__picomatch@4.0.3_vue@3.5.42__typescript@5.7.3_@types+node@24.11.0_typescript@5.7.3",
     "npm:d3-cloud@^1.2.7": "1.2.9",
     "npm:d3@^7.9.0": "7.9.0_d3-selection@3.0.0",
+    "npm:howler@^2.2.4": "2.2.4",
     "npm:typescript@~5.7.2": "5.7.3",
     "npm:vite@^6.0.7": "6.4.3_@types+node@24.11.0_picomatch@4.0.3",
     "npm:vue-router@^4.5.0": "4.6.4_vue@3.5.42__typescript@5.7.3_typescript@5.7.3",
@@ -468,6 +470,9 @@
     "@types/geojson@7946.0.16": {
       "integrity": "sha512-6C8nqWur3j98U6+lXDfTUWIfgvZU+EumvpHKcYjujKH7woYyLj2sUmff0tRhrqM7BohUw7Pz3ZB1jj2gW9Fvmg=="
     },
+    "@types/howler@2.2.13": {
+      "integrity": "sha512-40+EBjqIHHrC4VShlz/7i0lBUsE3QkgzZinQQji74Hd8sBkJZUBaT7LWFLK6rcabsDOOQpoMbEJvtaFQwxOu/g=="
+    },
     "@types/node@24.11.0": {
       "integrity": "sha512-fPxQqz4VTgPI/IQ+lj9r0h+fDR66bzoeMGHp8ASee+32OSGIkeASsoZuJixsQoVef1QJbeubcPBxKk22QVoWdw==",
       "dependencies": [
@@ -892,6 +897,9 @@
       "integrity": "sha512-F/1DnUGPopORZi0ni+CvrCgHQ5FyEAHRLSApuYWMmrbSwoN2Mn/7k+Gl38gJnR7yyDZk6WLXwiGod1JOWNDKGw==",
       "bin": true
     },
+    "howler@2.2.4": {
+      "integrity": "sha512-iARIBPgcQrwtEr+tALF+rapJ8qSc+Set2GJQl7xT1MQzWaVkFebdJhR3alVlSiUf5U7nAANKuj3aWpwerocD5w=="
+    },
     "iconv-lite@0.6.3": {
       "integrity": "sha512-4fCk79wshMdzMp2rH06qWrJE4iolqLhCUH+OiuIgU++RB0+94NlDL81atO7GX55uUKueo0txHNtvEyI6D7WdMw==",
       "dependencies": [
@@ -1056,10 +1064,12 @@
       "dependencies": [
         "npm:@types/d3-cloud@^1.2.9",
         "npm:@types/d3@^7.4.3",
+        "npm:@types/howler@^2.2.12",
         "npm:@types/node@24",
         "npm:@vitejs/plugin-vue@^5.2.1",
         "npm:d3-cloud@^1.2.7",
         "npm:d3@^7.9.0",
+        "npm:howler@^2.2.4",
         "npm:typescript@~5.7.2",
         "npm:vite@^6.0.7",
         "npm:vue-router@^4.5.0",

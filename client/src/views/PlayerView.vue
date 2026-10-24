@@ -3,6 +3,7 @@ import { computed, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, buildSearchParams, getfileUrl } from '../api'
 import AlbumCover from '../components/AlbumCover.vue'
+import HowlerPlayer from '../components/HowlerPlayer.vue'
 import { configState } from '../configStore'
 import { GENRES } from '../data/genres'
 import HintsPanel from '../components/HintsPanel.vue'
@@ -37,14 +38,13 @@ const router = useRouter()
 
 const track = ref<TrackInfo | null>(null)
 const error = ref<string | null>(null)
-const isPlaying = ref(false)
-/** Set when the next loaded track should start playing as soon as it can. */
+/** Whether a newly selected track should start playing automatically. */
 const autoplayPending = ref(false)
 /** "name that tune": details/cover stay hidden until Show Details is clicked. */
 const hintsRevealed = ref(false)
 const trackInfoMinimized = ref(false)
 
-const audioRef = ref<HTMLAudioElement | null>(null)
+const playerRef = ref<InstanceType<typeof HowlerPlayer> | null>(null)
 
 type LyricsKind = 'txt' | 'lrc'
 /** Lyrics buttons: plain-text (.txt) and synced (.lrc) lyrics files. */
@@ -95,7 +95,7 @@ function showTrack(next: TrackInfo, autoplay: boolean): void {
   hintsRevealed.value = false
   trackInfoMinimized.value = false
   track.value = next
-  // The audio element won't reload an unchanged src, so restart it directly.
+  // An unchanged source does not trigger the player's source watcher.
   autoplayPending.value = autoplay && !samePath
   if (autoplay && samePath) restart()
 }
@@ -235,22 +235,11 @@ const trackLinks = computed(() => {
 })
 
 function togglePlayback(): void {
-  const audio = audioRef.value
-  if (!audio) return
-  if (audio.paused) {
-    void audio.play()
-  } else {
-    audio.pause()
-  }
+  playerRef.value?.togglePlayback()
 }
 
 function restart(): void {
-  const audio = audioRef.value
-  if (!audio) return
-  audio.currentTime = 0
-  if (audio.paused) {
-    void audio.play()
-  }
+  playerRef.value?.restart()
 }
 
 function next(): void {
@@ -271,13 +260,6 @@ function onEnded(): void {
   goForward(true)
 }
 
-function onCanPlayThrough(): void {
-  const audio = audioRef.value
-  if (audio && autoplayPending.value && audio.paused) {
-    autoplayPending.value = false
-    void audio.play()
-  }
-}
 </script>
 
 <template>
@@ -409,17 +391,20 @@ function onCanPlayThrough(): void {
         <i class="bi bi-rewind-circle-fill"></i> Previous
       </button>
       <template v-if="localEnabled">
-        <button id="restartBtn" class="button-link" @click="restart">
+        <button id="restartBtn" class="button-link" :disabled="!track" @click="restart">
           <i class="bi bi-arrow-clockwise"></i> Restart
-        </button>
-        <button id="playBtn" class="button-link" @click="togglePlayback">
-          <template v-if="isPlaying"><i class="bi bi-pause-circle-fill"></i> Pause</template>
-          <template v-else><i class="bi bi-play-circle-fill"></i> Play</template>
         </button>
       </template>
       <button id="nextBtn" class="button-link" @click="next">
         <i class="bi bi-fast-forward-circle-fill"></i> Next
       </button>
+      <HowlerPlayer
+        v-if="localEnabled"
+        ref="playerRef"
+        :src="audioSrc"
+        :autoplay="autoplayPending"
+        @ended="onEnded"
+      />
       <button
         v-for="l in LYRICS_KINDS"
         :key="l.kind"
@@ -459,20 +444,6 @@ function onCanPlayThrough(): void {
       </div>
     </div>
 
-    <audio
-      v-if="localEnabled"
-      ref="audioRef"
-      id="audioElem"
-      class="full"
-      controls
-      :src="audioSrc"
-      @ended="onEnded"
-      @canplaythrough="onCanPlayThrough"
-      @play="isPlaying = true"
-      @pause="isPlaying = false"
-    >
-      Your browser does not support the audio element.
-    </audio>
   </div>
 </template>
 

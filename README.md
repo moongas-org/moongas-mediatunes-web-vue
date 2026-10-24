@@ -147,6 +147,20 @@ This is a visual content warning, not access control for the underlying media fi
 
 ### Play history
 
+Local playback uses Howler.js in Web Audio mode, downloading and decoding each
+track before playback so seeking works even when the media backend does not
+support HTTP byte-range requests. This can increase startup time and memory
+usage for large tracks. Howler falls back to HTML5 audio on browsers without
+Web Audio support; reliable seeking in that fallback requires the backend to
+support byte ranges (`206 Partial Content`).
+The player includes
+play/pause, a seekable progress bar with elapsed and total time, and volume
+control. Restart and clicking the track title control the same playback engine.
+Audio is unloaded when switching tracks or leaving the player. Load and playback
+errors (including blocked autoplay) are displayed with a Play-to-retry action.
+Next, Previous, and automatic advancement retain the history and filter fallback
+behavior below. Playback controls are hidden when local playback is disabled.
+
 The player and "name that tune" share a history of played tracks, stored in the
 `playHistory` cookie (one year, scoped to the app's base path, `SameSite=Lax`,
 `Secure` on HTTPS). Because cookies are limited to about 4 KB, only the most
