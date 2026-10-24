@@ -403,7 +403,12 @@ function onEnded(): void {
         ref="playerRef"
         :src="audioSrc"
         :autoplay="autoplayPending"
+        :title="!hintsMode || hintsRevealed ? track?.title : undefined"
+        :artist="!hintsMode || hintsRevealed ? track?.artist : undefined"
+        :album="!hintsMode || hintsRevealed ? track?.album : undefined"
         @ended="onEnded"
+        @next="next"
+        @previous="previous"
       />
       <button
         v-for="l in LYRICS_KINDS"

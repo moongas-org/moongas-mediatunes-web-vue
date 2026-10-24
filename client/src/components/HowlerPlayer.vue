@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
-import { Howl, Howler } from 'howler'
-import { resumeAudioContext } from '../utils/audioContext'
+import { Howl } from 'howler'
 
-const props = defineProps<{ src?: string; autoplay: boolean }>()
-const emit = defineEmits<{ ended: [] }>()
+const props = defineProps<{
+  src?: string
+  autoplay: boolean
+  title?: string
+  artist?: string
+  album?: string
+}>()
+const emit = defineEmits<{ ended: []; next: []; previous: [] }>()
 
 const isPlaying = ref(false)
 const loading = ref(false)
@@ -14,10 +19,9 @@ const volume = ref(1)
 const error = ref<string | null>(null)
 const retry = ref(0)
 let loadFailed = false
+let autoplayOnLoad = false
 let sound: Howl | null = null
 let progressTimer: ReturnType<typeof setInterval> | undefined
-let playAttempt = 0
-const reconnecting = ref(false)
 
 function formatTime(seconds: number): string {
   const total = Math.max(0, Math.floor(seconds))
@@ -32,6 +36,13 @@ function updateProgress(): void {
   duration.value = Number.isFinite(length) ? length : 0
   const seek = sound.seek()
   position.value = typeof seek === 'number' && Number.isFinite(seek) ? seek : 0
+  if ('mediaSession' in navigator && navigator.mediaSession.setPositionState && duration.value > 0) {
+    navigator.mediaSession.setPositionState({
+      duration: duration.value,
+      position: Math.min(position.value, duration.value),
+      playbackRate: 1,
+    })
+  }
 }
 
 function stopProgress(): void {
@@ -42,8 +53,6 @@ function stopProgress(): void {
 watch(
   () => [props.src, retry.value] as const,
   ([src], previous, onCleanup) => {
-    playAttempt++
-    reconnecting.value = false
     isPlaying.value = false
     position.value = 0
     duration.value = 0
@@ -51,24 +60,24 @@ watch(
     loading.value = Boolean(src)
     loadFailed = false
     if (!src) return
-    const shouldAutoplay = props.autoplay || Boolean(previous && previous[0] === src)
-
+    autoplayOnLoad = props.autoplay || Boolean(previous && previous[0] === src)
     const next = new Howl({
       src: [src],
-      // Decode the track so seeking does not depend on backend byte-range support.
-      html5: false,
+      // Stream with byte-range seeking and native background media events.
+      html5: true,
       preload: true,
       volume: volume.value,
       onload: () => {
         if (sound !== next) return
         loading.value = false
         updateProgress()
-        if (shouldAutoplay) void play()
+        if (autoplayOnLoad) play()
       },
       onplay: () => {
         if (sound !== next) return
         error.value = null
         isPlaying.value = true
+        setPlaybackState('playing')
         stopProgress()
         updateProgress()
         progressTimer = setInterval(updateProgress, 250)
@@ -76,6 +85,7 @@ watch(
       onpause: () => {
         if (sound !== next) return
         isPlaying.value = false
+        setPlaybackState('paused')
         stopProgress()
         updateProgress()
       },
@@ -94,32 +104,20 @@ watch(
         loading.value = false
         loadFailed = true
         isPlaying.value = false
+        setPlaybackState('paused')
         stopProgress()
         error.value = `Unable to load audio (${reason}). Press Play to retry.`
       },
       onplayerror: (_id, reason) => {
         if (sound !== next) return
         isPlaying.value = false
+        setPlaybackState('paused')
         stopProgress()
         error.value = `Unable to play audio (${reason}). Press Play to retry.`
       },
     })
     sound = next
-    const context = Howler.usingWebAudio ? Howler.ctx : null
-    const onContextChange = () => {
-      if (sound !== next || !context || context.state === 'running' || !next.playing()) return
-      // Stop Howler's end timer while the device clock is interrupted.
-      next.pause()
-      isPlaying.value = false
-      stopProgress()
-      updateProgress()
-      void play()
-    }
-    context?.addEventListener('statechange', onContextChange)
     onCleanup(() => {
-      playAttempt++
-      reconnecting.value = false
-      context?.removeEventListener('statechange', onContextChange)
       sound = null
       stopProgress()
       next.unload()
@@ -128,48 +126,34 @@ watch(
   { immediate: true },
 )
 
-async function play(): Promise<void> {
-  if (!sound) return
+function play(): void {
+  autoplayOnLoad = true
   if (loadFailed) {
     retry.value++
     return
   }
+  if (!sound) return
   if (loading.value) return
-  if (reconnecting.value) return
-  const target = sound
-  const attempt = ++playAttempt
   error.value = null
-  reconnecting.value = true
-  try {
-    if (Howler.usingWebAudio && Howler.ctx) await resumeAudioContext(Howler.ctx)
-    if (sound !== target || attempt !== playAttempt) return
-    target.play()
-  } catch (reason) {
-    if (sound !== target || attempt !== playAttempt) return
-    isPlaying.value = false
-    error.value = `Unable to resume audio. ${reason instanceof Error ? reason.message : String(reason)}`
-  } finally {
-    if (attempt === playAttempt) reconnecting.value = false
-  }
+  sound.play()
 }
 
 function togglePlayback(): void {
-  if (reconnecting.value) return
-  if (sound?.playing()) {
-    if (Howler.usingWebAudio && Howler.ctx?.state !== 'running') {
-      sound.pause()
-      void play()
-    } else {
-      sound.pause()
-    }
-  } else void play()
+  if (sound?.playing()) pause()
+  else play()
+}
+
+function pause(): void {
+  autoplayOnLoad = false
+  sound?.pause()
+  setPlaybackState('paused')
 }
 
 function restart(): void {
   if (!sound) return
   sound.seek(0)
   position.value = 0
-  if (!sound.playing()) void play()
+  if (!sound.playing()) play()
 }
 
 function seek(event: Event): void {
@@ -184,7 +168,62 @@ function changeVolume(event: Event): void {
   sound?.volume(volume.value)
 }
 
-onUnmounted(stopProgress)
+function setPlaybackState(state: MediaSessionPlaybackState): void {
+  if ('mediaSession' in navigator) navigator.mediaSession.playbackState = state
+}
+
+watch(
+  () => [props.title, props.artist, props.album],
+  () => {
+    if (!('mediaSession' in navigator) || typeof MediaMetadata === 'undefined') return
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: props.title || 'moongas mediatunes',
+      artist: props.artist || '',
+      album: props.album || '',
+    })
+  },
+  { immediate: true },
+)
+
+const mediaActions: Partial<Record<MediaSessionAction, MediaSessionActionHandler>> = {
+  play,
+  pause,
+  stop: () => {
+    autoplayOnLoad = false
+    sound?.stop()
+    isPlaying.value = false
+    stopProgress()
+    updateProgress()
+    setPlaybackState('none')
+  },
+  nexttrack: () => emit('next'),
+  previoustrack: () => emit('previous'),
+  seekto: ({ seekTime }) => {
+    if (seekTime !== undefined) sound?.seek(seekTime)
+  },
+  seekbackward: ({ seekOffset }) => { sound?.seek(Math.max(0, position.value - (seekOffset ?? 10))) },
+  seekforward: ({ seekOffset }) => { sound?.seek(Math.min(duration.value, position.value + (seekOffset ?? 10))) },
+}
+const registeredActions: MediaSessionAction[] = []
+if ('mediaSession' in navigator) {
+  for (const action of Object.keys(mediaActions) as MediaSessionAction[]) {
+    try {
+      navigator.mediaSession.setActionHandler(action, mediaActions[action] ?? null)
+      registeredActions.push(action)
+    } catch (reason) {
+      console.warn(`Media session action ${action} is unavailable`, reason)
+    }
+  }
+}
+
+onUnmounted(() => {
+  stopProgress()
+  if ('mediaSession' in navigator) {
+    for (const action of registeredActions) navigator.mediaSession.setActionHandler(action, null)
+    navigator.mediaSession.metadata = null
+    setPlaybackState('none')
+  }
+})
 defineExpose({ togglePlayback, restart })
 </script>
 
@@ -194,7 +233,7 @@ defineExpose({ togglePlayback, restart })
       <button
         id="playBtn"
         class="button-link"
-        :disabled="!src || loading || reconnecting"
+        :disabled="!src || loading"
         :aria-label="isPlaying ? 'Pause' : 'Play'"
         @click="togglePlayback"
       >
@@ -221,7 +260,6 @@ defineExpose({ togglePlayback, restart })
       </label>
     </div>
     <div v-if="loading" class="playback-status" role="status">Loading audio...</div>
-    <div v-else-if="reconnecting" class="playback-status" role="status">Connecting to audio device...</div>
     <div v-if="error" class="error playback-status" role="alert">{{ error }}</div>
   </div>
 </template>

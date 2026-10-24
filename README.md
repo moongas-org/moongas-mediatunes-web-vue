@@ -147,22 +147,26 @@ This is a visual content warning, not access control for the underlying media fi
 
 ### Play history
 
-Local playback uses Howler.js in Web Audio mode, downloading and decoding each
-track before playback so seeking works even when the media backend does not
-support HTTP byte-range requests. This can increase startup time and memory
-usage for large tracks. Howler falls back to HTML5 audio on browsers without
-Web Audio support; reliable seeking in that fallback requires the backend to
-support byte ranges (`206 Partial Content`).
+Local playback uses Howler.js in native HTML5 audio mode, streaming directly from
+the backend's `/getfile` endpoint without downloading the whole file into a blob
+or decoding it in Web Audio first. The browser manages buffering and can start
+playback before the entire file has downloaded. Seeking requires HTTP byte-range
+support end-to-end: the backend and any proxies must preserve `Range` requests
+and `206 Partial Content` responses with `Content-Range` and `Content-Length`.
+Native media-ended events allow automatic
+advancement without relying on Web Audio's JavaScript end timers, which mobile
+browsers can delay while the screen is locked.
 The player includes
 play/pause, a seekable progress bar with elapsed and total time, and volume
 control. Restart and clicking the track title control the same playback engine.
 Audio is unloaded when switching tracks or leaving the player. Load and playback
 errors (including blocked autoplay) are displayed with a Play-to-retry action.
-Audio-context interruptions (such as connecting Bluetooth headphones) pause the
-track at its current position and attempt to resume the audio device. If the
-browser requires a gesture or the device does not resume within four seconds,
-the player displays an error and enables Play to retry. A closed audio context
-requires reloading the player.
+Where supported, Media Session exposes play, pause, seek, Previous, and Next to
+lock-screen and Bluetooth controls, with track metadata (hidden in name-that-tune
+mode until revealed). Browser-native audio manages Bluetooth device routing.
+Audio is unloaded when switching tracks or leaving the player.
+Background playback still depends on the browser and OS allowing
+the page to run and make network requests; it cannot survive a terminated tab.
 Next, Previous, and automatic advancement retain the history and filter fallback
 behavior below. Playback controls are hidden when local playback is disabled.
 
