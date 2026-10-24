@@ -35,6 +35,9 @@ jobs:
       - name: Type-check client (vue-tsc)
         run: deno task check
 
+      - name: Test client
+        run: deno task test
+
       - name: Build client
         run: deno task build
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, onUnmounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { api, buildSearchParams, getfileUrl } from '../api'
 import AlbumCover from '../components/AlbumCover.vue'
 import { configState } from '../configStore'
@@ -10,6 +10,7 @@ import QueryFilters from '../components/QueryFilters.vue'
 import { useGeoFilterFields } from '../data/geoFilters'
 import WebSearchLinks from '../components/WebSearchLinks.vue'
 import mp3LogoUrl from '../assets/svg/mp3_logo.svg'
+import { loadNextTrack } from '../nextTrack'
 import {
   canGoBack,
   currentHistoryTrack,
@@ -32,6 +33,7 @@ import type { FilterField, TrackInfo } from '../types'
 const props = defineProps<{ hints?: boolean }>()
 
 const route = useRoute()
+const router = useRouter()
 
 const track = ref<TrackInfo | null>(null)
 const error = ref<string | null>(null)
@@ -83,6 +85,9 @@ function currentFilters(): string {
 
 /** Incremented per track change so stale random-track responses are ignored. */
 let trackRequestId = 0
+/** URL replacement for a selected track must not trigger another selection. */
+let selectedTrackUrl: string | null = null
+onUnmounted(() => { trackRequestId++ })
 
 function showTrack(next: TrackInfo, autoplay: boolean): void {
   const samePath = next.path === track.value?.path
@@ -97,23 +102,40 @@ function showTrack(next: TrackInfo, autoplay: boolean): void {
 
 async function loadRandomTrack(autoplay: boolean): Promise<void> {
   const requestId = ++trackRequestId
-  const filters = currentFilters()
   error.value = null
   try {
-    const next = await api.randomTrack(route.query)
-    if (requestId !== trackRequestId) return
-    pushHistory(next, filters)
+    const selection = await loadNextTrack(
+      route.query,
+      track.value?.path,
+      api.randomTrack,
+      () => requestId === trackRequestId,
+    )
+    if (!selection || requestId !== trackRequestId) return
+    const { track: next, query } = selection
+    pushHistory(next, buildSearchParams(query).toString())
     showTrack(next, autoplay)
+    if (route.query.hints !== undefined) query.hints = route.query.hints
+    const location = { path: route.path, query, hash: route.hash }
+    const url = router.resolve(location).fullPath
+    if (url !== route.fullPath) {
+      selectedTrackUrl = url
+      try {
+        const failure = await router.replace(location)
+        if (failure) throw failure
+      } finally {
+        if (selectedTrackUrl === url) selectedTrackUrl = null
+      }
+    }
   } catch (e) {
     if (requestId !== trackRequestId) return
-    track.value = null
     error.value = `Failed to load track(s). ${e instanceof Error ? e.message : String(e)}`
   }
 }
 
 /** Shows the previous/next track from the play history; false if there is none. */
 function showHistoryTrack(step: -1 | 1, autoplay: boolean): boolean {
-  const next = moveHistory(step)
+  let next = moveHistory(step)
+  while (next && next.path === track.value?.path) next = moveHistory(step)
   if (!next) return false
   trackRequestId++
   showTrack(next, autoplay)
@@ -128,6 +150,12 @@ function showHistoryTrack(step: -1 | 1, autoplay: boolean): boolean {
 watch(
   () => route.fullPath,
   () => {
+    if (route.fullPath === selectedTrackUrl) {
+      selectedTrackUrl = null
+      return
+    }
+    selectedTrackUrl = null
+    trackRequestId++
     const latest = currentHistoryTrack.value
     const filters = currentFilters()
     if (!hintsMode.value && latest && (filters === '' || filters === historyFilters.value)) {

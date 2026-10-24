@@ -4,6 +4,7 @@
   "version": "1.2.0",
   "type": "module",
   "scripts": {
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
     "dev": "vite",
     "build": "vite build",
     "check": "node node_modules/vue-tsc/bin/vue-tsc.js --noEmit"

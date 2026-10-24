@@ -1,5 +1,6 @@
 {
   "tasks": {
+    "test": "cd client && deno task test",
     "install": "cd client && deno install",
     "dev": "cd client && deno task dev",
     "build": "cd client && deno task build",

@@ -64,6 +64,12 @@ deno task dev       # http://localhost:5173
 deno task check     # runs vue-tsc on client/ and deno check on server/
 ```
 
+### Player tests
+
+```sh
+deno task test      # player selection regression tests (Node.js 24+)
+```
+
 ### Filter by year range
 
 [moongas.org/mediatunes/albums?minYear=1990&maxYear=2004](https://moongas.org/mediatunes/albums?minYear=1990&maxYear=2004)
@@ -157,6 +163,19 @@ recent tracks (typically around ten) are kept; the oldest are dropped first.
   filters load a new matching random track. With no history, a random track is
   loaded.
 - "Name that tune" always starts with a new random track.
+
+When a random selection returns the currently loaded track, the player retries
+without the **title** filter, then without **album**, then removes the remaining
+filter arguments one at a time in URL order. Repeated values for a filter are
+removed together. Once a different track is found, the URL and filter controls
+are updated to the relaxed query using browser-history replacement; the
+`hints` flag is preserved. Next and automatic advancement skip consecutive
+copies of the same file in older play histories.
+
+With no filters left, the player makes at most **10 unfiltered attempts** to
+find a different track. If none is returned, or an API request fails, it shows
+an error instead of repeating the current track. The current audio is left
+intact (so it can finish if still playing); Next can be used to try again.
 
 ### Runtimes
 
