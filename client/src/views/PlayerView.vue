@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { api, getfileUrl } from '../api'
+import { api, buildSearchParams, getfileUrl } from '../api'
 import AlbumCover from '../components/AlbumCover.vue'
 import { configState } from '../configStore'
 import { GENRES } from '../data/genres'
@@ -10,6 +10,13 @@ import QueryFilters from '../components/QueryFilters.vue'
 import { useGeoFilterFields } from '../data/geoFilters'
 import WebSearchLinks from '../components/WebSearchLinks.vue'
 import mp3LogoUrl from '../assets/svg/mp3_logo.svg'
+import {
+  canGoBack,
+  currentHistoryTrack,
+  historyFilters,
+  moveHistory,
+  pushHistory,
+} from '../playHistory'
 import type { FilterField, TrackInfo } from '../types'
 
 /**
@@ -17,7 +24,9 @@ import type { FilterField, TrackInfo } from '../types'
  *
  * Behavior: shows a random track matching the query-string filters; when local
  * playback is enabled, streams the file via /getfile and auto-advances to the
- * next random track when playback ends. With ?hints=1 ("name that tune"),
+ * next random track when playback ends. Played tracks are kept in a cookie
+ * history (see playHistory.ts) for the Previous/Next buttons, and the player
+ * resumes the most recent track. With ?hints=1 ("name that tune"),
  * track details and cover are hidden until the user reveals them.
  */
 const props = defineProps<{ hints?: boolean }>()
@@ -65,20 +74,70 @@ const filterFields: FilterField[] = [
   ...useGeoFilterFields(),
 ]
 
-async function loadTrack(autoplay = false): Promise<void> {
+/** Filter params in the URL (excluding the "name that tune" hints flag). */
+function currentFilters(): string {
+  const params = buildSearchParams(route.query)
+  params.delete('hints')
+  return params.toString()
+}
+
+/** Incremented per track change so stale random-track responses are ignored. */
+let trackRequestId = 0
+
+function showTrack(next: TrackInfo, autoplay: boolean): void {
+  const samePath = next.path === track.value?.path
   error.value = null
   hintsRevealed.value = false
-  autoplayPending.value = autoplay
+  trackInfoMinimized.value = false
+  track.value = next
+  // The audio element won't reload an unchanged src, so restart it directly.
+  autoplayPending.value = autoplay && !samePath
+  if (autoplay && samePath) restart()
+}
+
+async function loadRandomTrack(autoplay: boolean): Promise<void> {
+  const requestId = ++trackRequestId
+  const filters = currentFilters()
+  error.value = null
   try {
-    track.value = await api.randomTrack(route.query)
-    trackInfoMinimized.value = false
+    const next = await api.randomTrack(route.query)
+    if (requestId !== trackRequestId) return
+    pushHistory(next, filters)
+    showTrack(next, autoplay)
   } catch (e) {
+    if (requestId !== trackRequestId) return
     track.value = null
     error.value = `Failed to load track(s). ${e instanceof Error ? e.message : String(e)}`
   }
 }
 
-watch(() => route.query, () => loadTrack(false), { immediate: true })
+/** Shows the previous/next track from the play history; false if there is none. */
+function showHistoryTrack(step: -1 | 1, autoplay: boolean): boolean {
+  const next = moveHistory(step)
+  if (!next) return false
+  trackRequestId++
+  showTrack(next, autoplay)
+  return true
+}
+
+/**
+ * The player resumes the most recently played track unless the URL has
+ * different filters than it was loaded with; "name that tune" always starts
+ * with a new random track.
+ */
+watch(
+  () => route.fullPath,
+  () => {
+    const latest = currentHistoryTrack.value
+    const filters = currentFilters()
+    if (!hintsMode.value && latest && (filters === '' || filters === historyFilters.value)) {
+      if (latest.path !== track.value?.path) showTrack(latest, false)
+      return
+    }
+    void loadRandomTrack(false)
+  },
+  { immediate: true },
+)
 
 const audioSrc = computed(() =>
   track.value && localEnabled.value ? getfileUrl(track.value.path) : undefined,
@@ -167,12 +226,21 @@ function restart(): void {
 }
 
 function next(): void {
-  void loadTrack(localEnabled.value)
+  goForward(localEnabled.value)
 }
 
-/** Continuous shuffle: when a track ends, load the next one and play it. */
+function previous(): void {
+  showHistoryTrack(-1, localEnabled.value)
+}
+
+/** Replays the next track in the history if there is one, else loads a new random track. */
+function goForward(autoplay: boolean): void {
+  if (!showHistoryTrack(1, autoplay)) void loadRandomTrack(autoplay)
+}
+
+/** Continuous shuffle: when a track ends, advance to the next one and play it. */
 function onEnded(): void {
-  void loadTrack(true)
+  goForward(true)
 }
 
 function onCanPlayThrough(): void {
@@ -308,8 +376,11 @@ function onCanPlayThrough(): void {
       </button>
     </div>
     <div id="playerControls">
+      <h1 v-if="localEnabled && hintsMode">Random track, can you name it?</h1>
+      <button id="previousBtn" class="button-link" :disabled="!canGoBack" @click="previous">
+        <i class="bi bi-rewind-circle-fill"></i> Previous
+      </button>
       <template v-if="localEnabled">
-        <h1 v-if="hintsMode">Random track, can you name it?</h1>
         <button id="restartBtn" class="button-link" @click="restart">
           <i class="bi bi-arrow-clockwise"></i> Restart
         </button>

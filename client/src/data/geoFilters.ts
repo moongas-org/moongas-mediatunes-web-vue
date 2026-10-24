@@ -30,6 +30,17 @@ async function loadKind(kind: GeoKind, key: GeoKey): Promise<void> {
 
 let loadPromise: Promise<void> | null = null
 
+/** Display name for a country code (falls back to the code). */
+export function countryName(code: string): string {
+  return COUNTRIES.find((c) => c.value === code)?.label ?? code
+}
+
+/** Display name for a region code once loaded from the backend (falls back to the code). */
+export function regionName(code: string): string {
+  ensureLoaded()
+  return geoOptions.regionCode.find((r) => r.value === code)?.label ?? code
+}
+
 function ensureLoaded(): void {
   loadPromise ??= Promise.all([
     loadKind('regions', 'regionCode'),

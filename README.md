@@ -139,6 +139,25 @@ Existing local-storage confirmations are not used in place of the cookie.
 The explicit-cover blur applies regardless of the backend's age-verification setting.
 This is a visual content warning, not access control for the underlying media files.
 
+### Play history
+
+The player and "name that tune" share a history of played tracks, stored in the
+`playHistory` cookie (one year, scoped to the app's base path, `SameSite=Lax`,
+`Secure` on HTTPS). Because cookies are limited to about 4 KB, only the most
+recent tracks (typically around ten) are kept; the oldest are dropped first.
+
+- **Previous** (left of Restart) goes back one track in the history and is
+  disabled at the oldest remembered track.
+- **Next** (and the end of playback) goes forward through the history when
+  replaying earlier tracks, and loads a new random track once the latest track
+  is reached. Loading a new track while earlier in the history discards the
+  tracks after the current one.
+- The player resumes the most recently played track when opened without
+  filters, or with the same filters that track was loaded with; any other
+  filters load a new matching random track. With no history, a random track is
+  loaded.
+- "Name that tune" always starts with a new random track.
+
 ### Runtimes
 
 - **Node 24+** runs the client toolchain: `deno task install` (dependency install), `dev`, `build`, and `check` (vue-tsc) all execute under Node.
@@ -185,7 +204,6 @@ This is a visual content warning, not access control for the underlying media fi
 
 - Play entire albums
 - Playlists
-- Back button to go back to previous track(s) in player
 - Sort by modified time
 
 ## Dependencies
