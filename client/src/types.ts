@@ -83,6 +83,7 @@ export interface TrackInfo {
   path: string
   coverPath: string
   artist: string
+  albumartist: string
   album: string
   title: string
   genre: string

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, type LocationQueryRaw } from 'vue-router'
-import { api } from '../api'
+import { api, buildSearchParams } from '../api'
 import AlbumCover from '../components/AlbumCover.vue'
 import QueryFilters from '../components/QueryFilters.vue'
 import { useGeoFilterFields } from '../data/geoFilters'
@@ -20,20 +20,31 @@ const files = ref<MediaFile[]>([])
 const coverPath = ref('')
 const loading = ref(false)
 const error = ref<string | null>(null)
+let requestId = 0
+
+/** Blank params are ignored, matching what would be sent to the API. */
+const hasFilters = computed(() => buildSearchParams(route.query).toString() !== '')
 
 async function load(): Promise<void> {
-  loading.value = true
+  const currentRequestId = ++requestId
+  files.value = []
+  coverPath.value = ''
   error.value = null
+  if (!hasFilters.value) {
+    loading.value = false
+    return
+  }
+  loading.value = true
   try {
     const data = await api.tracks(route.query)
+    if (currentRequestId !== requestId) return
     files.value = data.files
     coverPath.value = data.coverPath
   } catch (e) {
+    if (currentRequestId !== requestId) return
     error.value = e instanceof Error ? e.message : String(e)
-    files.value = []
-    coverPath.value = ''
   } finally {
-    loading.value = false
+    if (currentRequestId === requestId) loading.value = false
   }
 }
 
@@ -83,12 +94,18 @@ const singleAlbum = computed<{ artist: string; album: string } | null>(() => {
   <div>
     <QueryFilters :fields="filterFields" />
     <div class="results-info">
-      <template v-if="!loading && !error">{{ formatResults(files.length, maxResults) }}</template>
-      <router-link class="button-link" :to="{ path: '/player', query: route.query }"><i class="bi bi-shuffle"></i> play</router-link>
+      <template v-if="!hasFilters">Add a filter to list tracks.</template>
+      <template v-else-if="!loading && !error">{{ formatResults(files.length, maxResults) }}</template>
+      <router-link
+        v-if="!loading && !error && files.length > 0"
+        class="button-link"
+        :to="{ path: '/player', query: route.query }"
+        ><i class="bi bi-shuffle"></i> play</router-link
+      >
     </div>
     <div v-if="error" class="error">{{ error }}</div>
     <LoadingSpinner v-else-if="loading" />
-    <template v-else>
+    <template v-else-if="hasFilters">
       <div v-if="albumParam.length > 0 && coverPath.length > 0 && isSingleAlbum">
         <br />
         <AlbumCover
@@ -114,6 +131,7 @@ const singleAlbum = computed<{ artist: string; album: string } | null>(() => {
               <th>Year</th>
               <th>Genre</th>
               <th>Artist</th>
+              <th>Album Artist</th>
               <th>Album</th>
               <th>Title</th>
             </tr>
@@ -131,8 +149,18 @@ const singleAlbum = computed<{ artist: string; album: string } | null>(() => {
                   }}</router-link>
               </td>
               <td>
-                <router-link :to="{ path: '/albums', query: { artist: file.artist } }">{{
+                <!-- 
+                  Linking to the artist view would currently 404 on some artists because 
+                  not every artist is an album artist. 
+                  E.g. "http://localhost/mediatunes/artist?artist=A+Tribe+Called+Quest,+Busta+Rhymes,+Redman"
+                -->
+                <router-link :to="{ path: '/artists', query: { artist: file.artist } }">{{
                   file.artist
+                  }}</router-link>
+              </td>
+              <td>
+                <router-link v-if="file.albumartist"
+                  :to="{ path: '/artists', query: { albumartist: file.albumartist } }">{{ file.albumartist
                   }}</router-link>
               </td>
               <td>

@@ -133,6 +133,7 @@ const trackLinks = computed(() => {
   return {
     album: { path: '/tracks', query: { artist: t.artist, album: t.album } },
     artist: { path: '/artist', query: { artist: t.artist } },
+    albumartist: { path: '/artists', query: { albumartist: t.albumartist } },
     city: { path: '/artists', query: { city: t.city, countryCode: t.countryCode } },
     language: { path: '/artists', query: { languageCode: t.languageCode } },
     country: { path: '/artists', query: { countryCode: t.countryCode } },
@@ -218,6 +219,19 @@ function onCanPlayThrough(): void {
               <router-link id="linkArtist" :to="trackLinks.artist" target="_blank" rel="noopener noreferrer">{{
                 track.artist
               }}</router-link>
+            </td>
+          </tr>
+          <tr>
+            <th>Album Artist:</th>
+            <td>
+              <router-link
+                v-if="track.albumartist"
+                id="linkAlbumArtist"
+                :to="trackLinks.albumartist"
+                target="_blank"
+                rel="noopener noreferrer"
+                >{{ track.albumartist }}</router-link
+              >
             </td>
           </tr>
           <tr>
