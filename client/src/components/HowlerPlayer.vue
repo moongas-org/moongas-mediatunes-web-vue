@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
-import { Howl } from 'howler'
+import { Howl, Howler } from 'howler'
+import { resumeAudioContext } from '../utils/audioContext'
 
 const props = defineProps<{ src?: string; autoplay: boolean }>()
 const emit = defineEmits<{ ended: [] }>()
@@ -15,6 +16,8 @@ const retry = ref(0)
 let loadFailed = false
 let sound: Howl | null = null
 let progressTimer: ReturnType<typeof setInterval> | undefined
+let playAttempt = 0
+const reconnecting = ref(false)
 
 function formatTime(seconds: number): string {
   const total = Math.max(0, Math.floor(seconds))
@@ -39,6 +42,8 @@ function stopProgress(): void {
 watch(
   () => [props.src, retry.value] as const,
   ([src], previous, onCleanup) => {
+    playAttempt++
+    reconnecting.value = false
     isPlaying.value = false
     position.value = 0
     duration.value = 0
@@ -46,6 +51,7 @@ watch(
     loading.value = Boolean(src)
     loadFailed = false
     if (!src) return
+    const shouldAutoplay = props.autoplay || Boolean(previous && previous[0] === src)
 
     const next = new Howl({
       src: [src],
@@ -57,6 +63,7 @@ watch(
         if (sound !== next) return
         loading.value = false
         updateProgress()
+        if (shouldAutoplay) void play()
       },
       onplay: () => {
         if (sound !== next) return
@@ -98,8 +105,21 @@ watch(
       },
     })
     sound = next
-    if (props.autoplay || (previous && previous[0] === src)) next.play()
+    const context = Howler.usingWebAudio ? Howler.ctx : null
+    const onContextChange = () => {
+      if (sound !== next || !context || context.state === 'running' || !next.playing()) return
+      // Stop Howler's end timer while the device clock is interrupted.
+      next.pause()
+      isPlaying.value = false
+      stopProgress()
+      updateProgress()
+      void play()
+    }
+    context?.addEventListener('statechange', onContextChange)
     onCleanup(() => {
+      playAttempt++
+      reconnecting.value = false
+      context?.removeEventListener('statechange', onContextChange)
       sound = null
       stopProgress()
       next.unload()
@@ -108,27 +128,48 @@ watch(
   { immediate: true },
 )
 
-function play(): void {
+async function play(): Promise<void> {
   if (!sound) return
   if (loadFailed) {
     retry.value++
     return
   }
   if (loading.value) return
+  if (reconnecting.value) return
+  const target = sound
+  const attempt = ++playAttempt
   error.value = null
-  sound.play()
+  reconnecting.value = true
+  try {
+    if (Howler.usingWebAudio && Howler.ctx) await resumeAudioContext(Howler.ctx)
+    if (sound !== target || attempt !== playAttempt) return
+    target.play()
+  } catch (reason) {
+    if (sound !== target || attempt !== playAttempt) return
+    isPlaying.value = false
+    error.value = `Unable to resume audio. ${reason instanceof Error ? reason.message : String(reason)}`
+  } finally {
+    if (attempt === playAttempt) reconnecting.value = false
+  }
 }
 
 function togglePlayback(): void {
-  if (sound?.playing()) sound.pause()
-  else play()
+  if (reconnecting.value) return
+  if (sound?.playing()) {
+    if (Howler.usingWebAudio && Howler.ctx?.state !== 'running') {
+      sound.pause()
+      void play()
+    } else {
+      sound.pause()
+    }
+  } else void play()
 }
 
 function restart(): void {
   if (!sound) return
   sound.seek(0)
   position.value = 0
-  if (!sound.playing()) play()
+  if (!sound.playing()) void play()
 }
 
 function seek(event: Event): void {
@@ -153,7 +194,7 @@ defineExpose({ togglePlayback, restart })
       <button
         id="playBtn"
         class="button-link"
-        :disabled="!src || loading"
+        :disabled="!src || loading || reconnecting"
         :aria-label="isPlaying ? 'Pause' : 'Play'"
         @click="togglePlayback"
       >
@@ -180,6 +221,7 @@ defineExpose({ togglePlayback, restart })
       </label>
     </div>
     <div v-if="loading" class="playback-status" role="status">Loading audio...</div>
+    <div v-else-if="reconnecting" class="playback-status" role="status">Connecting to audio device...</div>
     <div v-if="error" class="error playback-status" role="alert">{{ error }}</div>
   </div>
 </template>

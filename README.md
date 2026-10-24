@@ -158,6 +158,11 @@ play/pause, a seekable progress bar with elapsed and total time, and volume
 control. Restart and clicking the track title control the same playback engine.
 Audio is unloaded when switching tracks or leaving the player. Load and playback
 errors (including blocked autoplay) are displayed with a Play-to-retry action.
+Audio-context interruptions (such as connecting Bluetooth headphones) pause the
+track at its current position and attempt to resume the audio device. If the
+browser requires a gesture or the device does not resume within four seconds,
+the player displays an error and enables Play to retry. A closed audio context
+requires reloading the player.
 Next, Previous, and automatic advancement retain the history and filter fallback
 behavior below. Playback controls are hidden when local playback is disabled.
 
