@@ -3,6 +3,7 @@
  */
 
 export interface MediaFile {
+  id: number
   path: string
   size: number
   format: string

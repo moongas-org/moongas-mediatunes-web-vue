@@ -70,6 +70,12 @@ deno task check     # runs vue-tsc on client/ and deno check on server/
 deno task test      # player selection regression tests (Node.js 24+)
 ```
 
+The player and Name That Tune select metadata via `/api/random-track`, then
+look up the selected track's ID in `/api/tracks` and request
+`/api/mediafiles?trackid=<id>`. Playback and lyrics use the first media file's
+path, not the track's YAML path. The same lookup applies to resumed tracks and
+Previous/Next history navigation. Empty media-file results display an error.
+
 ### Filter by year range
 
 [moongas.org/mediatunes/albums?minYear=1990&maxYear=2004](https://moongas.org/mediatunes/albums?minYear=1990&maxYear=2004)

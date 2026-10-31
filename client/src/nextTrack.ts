@@ -1,11 +1,34 @@
 import type { LocationQuery } from 'vue-router'
-import type { TrackInfo } from './types'
+import type { MediaFile, TrackInfo } from './types'
 
 const MAX_UNFILTERED_ATTEMPTS = 10
 
 interface TrackSelection {
   track: TrackInfo
   query: LocationQuery
+}
+
+/** Resolves the selected track's YAML path to its first playable media file. */
+export async function loadTrackMediaPath(
+  track: TrackInfo,
+  tracks: (query: LocationQuery) => Promise<{ files: Pick<MediaFile, 'id' | 'path'>[] }>,
+  mediafiles: (query: LocationQuery) => Promise<{ mediafiles: Pick<MediaFile, 'path'>[] }>,
+  isCurrent: () => boolean,
+): Promise<string | null> {
+  if (!isCurrent()) return null
+  const result = await tracks({ artist: track.artist, album: track.album, title: track.title })
+  if (!isCurrent()) return null
+  const selected = result.files.find((file) => file.path === track.path)
+  if (!selected || !Number.isInteger(selected.id)) {
+    throw new Error(`Unable to find the track ID for ${track.path}.`)
+  }
+  const media = await mediafiles({ trackid: String(selected.id) })
+  if (!isCurrent()) return null
+  const first = media.mediafiles[0]
+  if (!first?.path) {
+    throw new Error(`No media file found for track ID ${selected.id}.`)
+  }
+  return first.path
 }
 
 /** Returns a different track and the filters that selected it. */

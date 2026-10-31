@@ -11,7 +11,7 @@ import QueryFilters from '../components/QueryFilters.vue'
 import { useGeoFilterFields } from '../data/geoFilters'
 import WebSearchLinks from '../components/WebSearchLinks.vue'
 import mp3LogoUrl from '../assets/svg/mp3_logo.svg'
-import { loadNextTrack } from '../nextTrack'
+import { loadNextTrack, loadTrackMediaPath } from '../nextTrack'
 import {
   canGoBack,
   currentHistoryTrack,
@@ -37,6 +37,7 @@ const route = useRoute()
 const router = useRouter()
 
 const track = ref<TrackInfo | null>(null)
+const mediaPath = ref<string | null>(null)
 const error = ref<string | null>(null)
 /** Whether a newly selected track should start playing automatically. */
 const autoplayPending = ref(false)
@@ -168,7 +169,25 @@ watch(
 )
 
 const audioSrc = computed(() =>
-  track.value && localEnabled.value ? getfileUrl(track.value.path) : undefined,
+  mediaPath.value && localEnabled.value ? getfileUrl(mediaPath.value) : undefined,
+)
+
+watch(
+  () => track.value,
+  async (selected, _previous, onCleanup) => {
+    let active = true
+    onCleanup(() => { active = false })
+    mediaPath.value = null
+    if (!selected) return
+    try {
+      const path = await loadTrackMediaPath(selected, api.tracks, api.mediafiles, () => active)
+      if (active) mediaPath.value = path
+    } catch (e) {
+      if (!active) return
+      error.value = `Failed to load media file. ${e instanceof Error ? e.message : String(e)}`
+    }
+  },
+  { immediate: true },
 )
 
 /**
@@ -176,7 +195,7 @@ const audioSrc = computed(() =>
  * They're fetched regardless of whether local playback is enabled.
  */
 watch(
-  () => track.value?.path,
+  () => mediaPath.value,
   async (path) => {
     const requestId = ++lyricsRequestId
     lyrics.value = { txt: null, lrc: null }

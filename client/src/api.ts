@@ -93,6 +93,9 @@ export const api = {
   tracks: (query: LocationQuery) =>
     fetchJson<{ files: MediaFile[]; coverPath: string }>('/tracks', query),
 
+  mediafiles: (query: LocationQuery) =>
+    fetchJson<{ mediafiles: Pick<MediaFile, 'path'>[] }>('/mediafiles', query),
+
   artists: (query: LocationQuery) =>
     fetchJson<{ artists: ArtistCount[] }>('/artists', query),
 

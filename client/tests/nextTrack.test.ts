@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { loadNextTrack } from '../src/nextTrack.ts'
+import { loadNextTrack, loadTrackMediaPath } from '../src/nextTrack.ts'
 import type { TrackInfo } from '../src/types.ts'
 
 const current: TrackInfo = {
@@ -138,4 +138,91 @@ test('cancelled requests do not contact the API', async () => {
     assert.fail('Unexpected API request')
   }, () => false)
   assert.equal(result, null)
+})
+
+test('resolves the selected YAML track by ID and takes only the first media file', async () => {
+  const selected = { ...current, path: '/tracks/current.yml' }
+  const calls: string[] = []
+  const path = await loadTrackMediaPath(selected, async (query) => {
+    calls.push('tracks')
+    assert.deepEqual(query, { artist: 'Artist', album: 'Album', title: 'Current' })
+    return { files: [
+      { id: 8, path: '/tracks/another.yml' },
+      { id: 42, path: selected.path },
+    ] }
+  }, async (query) => {
+    calls.push('mediafiles')
+    assert.deepEqual(query, { trackid: '42' })
+    return { mediafiles: [{ path: '/media/current.mp3' }, { path: '/media/current.flac' }] }
+  }, active)
+  assert.deepEqual(calls, ['tracks', 'mediafiles'])
+  assert.equal(path, '/media/current.mp3')
+  assert.equal(selected.path, '/tracks/current.yml')
+})
+
+test('reports missing track IDs rather than using a YAML path for playback', async () => {
+  for (const files of [
+    [],
+    [{ id: 42, path: '/another.yml' }],
+    [{ id: Number.NaN, path: current.path }],
+  ]) {
+    await assert.rejects(loadTrackMediaPath(current, async () => ({
+      files,
+    }), async () => {
+      assert.fail('Must not request media without a matching track ID')
+    }, active), /Unable to find the track ID/)
+  }
+})
+
+test('reports empty media lists and missing media paths', async () => {
+  for (const mediafiles of [[], [{ path: '' }]]) {
+    await assert.rejects(loadTrackMediaPath(current, async () => ({
+      files: [{ id: 42, path: current.path }],
+    }), async () => ({ mediafiles }), active), /No media file found for track ID 42/)
+  }
+})
+
+test('propagates errors from both track and media-file requests', async () => {
+  const failure = new Error('Service unavailable')
+  await assert.rejects(loadTrackMediaPath(current, async () => {
+    throw failure
+  }, async () => {
+    assert.fail('Must not request media after a failed tracks request')
+  }, active), failure)
+  await assert.rejects(loadTrackMediaPath(current, async () => ({
+    files: [{ id: 42, path: current.path }],
+  }), async () => {
+    throw failure
+  }, active), failure)
+})
+
+test('ignores stale track lookups without requesting media', async () => {
+  let isCurrent = true
+  const path = await loadTrackMediaPath(current, async () => {
+    isCurrent = false
+    return { files: [{ id: 42, path: current.path }] }
+  }, async () => {
+    assert.fail('Must not request media for a stale track')
+  }, () => isCurrent)
+  assert.equal(path, null)
+})
+
+test('ignores stale media-file responses', async () => {
+  let isCurrent = true
+  const path = await loadTrackMediaPath(current, async () => ({
+    files: [{ id: 42, path: current.path }],
+  }), async () => {
+    isCurrent = false
+    return { mediafiles: [{ path: '/stale.mp3' }] }
+  }, () => isCurrent)
+  assert.equal(path, null)
+})
+
+test('cancelled media resolution does not contact either endpoint', async () => {
+  const path = await loadTrackMediaPath(current, async () => {
+    assert.fail('Unexpected tracks request')
+  }, async () => {
+    assert.fail('Unexpected mediafiles request')
+  }, () => false)
+  assert.equal(path, null)
 })
