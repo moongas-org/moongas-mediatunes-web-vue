@@ -99,8 +99,10 @@ const singleAlbum = computed<{ artist: string; album: string } | null>(() => {
       <router-link
         v-if="!loading && !error && files.length > 0"
         class="button-link"
+        aria-label="Shuffle"
+        title="Shuffle"
         :to="{ path: '/player', query: route.query }"
-        ><i class="bi bi-shuffle"></i> play</router-link
+        ><i class="bi bi-shuffle" aria-hidden="true"></i></router-link
       >
     </div>
     <div v-if="error" class="error">{{ error }}</div>

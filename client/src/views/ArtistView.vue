@@ -54,8 +54,8 @@ watch(() => route.query, load, { immediate: true })
         </tr>
         <tr>
           <td>
-            <router-link class="button-link" :to="{ path: '/player', query: { albumartist: artist.name } }"
-              ><i class="bi bi-shuffle"></i> play</router-link
+            <router-link class="button-link" aria-label="Shuffle" title="Shuffle" :to="{ path: '/player', query: { albumartist: artist.name } }"
+              ><i class="bi bi-shuffle" aria-hidden="true"></i></router-link
             >
           </td>
         </tr>

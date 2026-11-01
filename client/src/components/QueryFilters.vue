@@ -174,7 +174,7 @@ function optionsWith(field: FilterField, value: string): FilterOption[] {
     </span>
 
     <select v-if="addable.length" v-model="addKey" class="query-filter-add" @change="addPending">
-      <option value="" disabled>+ add filter</option>
+      <option value="" disabled>+ filter</option>
       <option v-for="f in addable" :key="f.key" :value="f.key">{{ f.label }}</option>
     </select>
   </div>

@@ -224,22 +224,12 @@ onUnmounted(() => {
     setPlaybackState('none')
   }
 })
-defineExpose({ togglePlayback, restart })
+defineExpose({ togglePlayback, restart, isPlaying, loading })
 </script>
 
 <template>
   <div class="howler-player" role="group" aria-label="Audio player">
     <div class="playback-row">
-      <button
-        id="playBtn"
-        class="button-link"
-        :disabled="!src || loading"
-        :aria-label="isPlaying ? 'Pause' : 'Play'"
-        @click="togglePlayback"
-      >
-        <i :class="isPlaying ? 'bi bi-pause-circle-fill' : 'bi bi-play-circle-fill'" aria-hidden="true"></i>
-        {{ isPlaying ? 'Pause' : 'Play' }}
-      </button>
       <span class="playback-time">{{ formatTime(position) }}</span>
       <input
         class="playback-progress"

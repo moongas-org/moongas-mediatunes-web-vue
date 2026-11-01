@@ -73,8 +73,8 @@ function sortQuery(sort: string): LocationQueryRaw {
     <QueryFilters :fields="filterFields" />
     <div class="results-info">
       <template v-if="!loading && !error">{{ formatResults(artists.length, maxResults) }}</template>
-      <router-link class="button-link" :to="{ path: '/player', query: route.query }"
-        ><i class="bi bi-shuffle"></i> play</router-link
+      <router-link class="button-link" aria-label="Shuffle" title="Shuffle" :to="{ path: '/player', query: route.query }"
+        ><i class="bi bi-shuffle" aria-hidden="true"></i></router-link
       >
     </div>
     <div v-if="error" class="error">{{ error }}</div>

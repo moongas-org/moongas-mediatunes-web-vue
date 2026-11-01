@@ -28,7 +28,9 @@ import type { FilterField, TrackInfo } from '../types'
  * playback is enabled, streams the file via /getfile and auto-advances to the
  * next random track when playback ends. Played tracks are kept in a cookie
  * history (see playHistory.ts) for the Previous/Next buttons, and the player
- * resumes the most recent track. With ?hints=1 ("name that tune"),
+ * resumes the most recent track. Track info collapses after 10 seconds without
+ * hover or keyboard focus; explicitly reopening it keeps it visible until the
+ * next track. With ?hints=1 ("name that tune"),
  * track details and cover are hidden until the user reveals them.
  */
 const props = defineProps<{ hints?: boolean }>()
@@ -44,6 +46,31 @@ const autoplayPending = ref(false)
 /** "name that tune": details/cover stay hidden until Show Details is clicked. */
 const hintsRevealed = ref(false)
 const trackInfoMinimized = ref(false)
+const trackInfoPinned = ref(false)
+const trackInfoHovered = ref(false)
+const trackInfoBarHovered = ref(false)
+const trackInfoFocused = ref(false)
+let trackInfoHideTimer: ReturnType<typeof setTimeout> | undefined
+
+function clearTrackInfoHideTimer(): void {
+  clearTimeout(trackInfoHideTimer)
+  trackInfoHideTimer = undefined
+}
+
+function updateTrackInfoFocus(event: FocusEvent): void {
+  const target = event.type === 'focusin' ? event.target : event.relatedTarget
+  trackInfoFocused.value = target instanceof Element
+    && event.currentTarget instanceof Element
+    && event.currentTarget.contains(target)
+    && target.closest('.cover-info, .cover-info-bar') !== null
+}
+
+function toggleTrackInfo(): void {
+  if (trackInfoMinimized.value) trackInfoPinned.value = true
+  trackInfoMinimized.value = !trackInfoMinimized.value
+}
+
+onUnmounted(clearTrackInfoHideTimer)
 
 const playerRef = ref<InstanceType<typeof HowlerPlayer> | null>(null)
 
@@ -72,6 +99,31 @@ let lyricsRequestId = 0
 
 const localEnabled = computed(() => configState.config?.playbackMethodLocalEnabled ?? false)
 const hintsMode = computed(() => props.hints || route.query.hints === '1')
+
+watch(
+  [
+    track,
+    () => !hintsMode.value || hintsRevealed.value,
+    trackInfoMinimized,
+    trackInfoPinned,
+    trackInfoHovered,
+    trackInfoBarHovered,
+    trackInfoFocused,
+  ],
+  ([selected, visible, minimized, pinned, hovered, barHovered, focused]) => {
+    clearTrackInfoHideTimer()
+    if (!visible) {
+      trackInfoHovered.value = false
+      trackInfoBarHovered.value = false
+      trackInfoFocused.value = false
+    }
+    if (!selected || !visible || minimized || pinned || hovered || barHovered || focused) return
+    trackInfoHideTimer = setTimeout(() => {
+      trackInfoHideTimer = undefined
+      trackInfoMinimized.value = true
+    }, 10_000)
+  },
+)
 
 const filterFields: FilterField[] = [
   { key: 'artist', label: 'artist', multi: true },
@@ -103,6 +155,7 @@ function showTrack(next: TrackInfo, autoplay: boolean): void {
   const samePath = next.path === track.value?.path
   error.value = null
   hintsRevealed.value = false
+  trackInfoPinned.value = false
   trackInfoMinimized.value = false
   track.value = next
   // An unchanged source does not trigger the player's source watcher.
@@ -337,6 +390,8 @@ function onEnded(): void {
       id="cover"
       class="player-cover"
       :class="{ 'info-minimized': trackInfoMinimized }"
+      @focusin="updateTrackInfoFocus"
+      @focusout="updateTrackInfoFocus"
     >
       <AlbumCover
         :cover-path="track.coverPath"
@@ -349,7 +404,13 @@ function onEnded(): void {
         :aria-expanded="!trackInfoMinimized"
         @activate="trackInfoMinimized = true"
       />
-      <div id="coverTrackInfo" class="cover-info" :inert="trackInfoMinimized">
+      <div
+        id="coverTrackInfo"
+        class="cover-info"
+        :inert="trackInfoMinimized"
+        @mouseenter="trackInfoHovered = true"
+        @mouseleave="trackInfoHovered = false"
+      >
         <table class="playback-options track-info">
           <tr>
             <th>Title:</th>
@@ -442,27 +503,39 @@ function onEnded(): void {
         :aria-label="trackInfoMinimized ? 'Show track info' : 'Hide track info'"
         aria-controls="coverTrackInfo"
         :aria-expanded="!trackInfoMinimized"
-        @click="trackInfoMinimized = !trackInfoMinimized"
+        @mouseenter="trackInfoBarHovered = true"
+        @mouseleave="trackInfoBarHovered = false"
+        @click="toggleTrackInfo"
       >
         <i
           class="bi"
           :class="trackInfoMinimized ? 'bi-chevron-up' : 'bi-chevron-down'"
           aria-hidden="true"
-        ></i> {{ trackInfoMinimized ? 'Show track info' : 'Hide track info' }}
+        ></i>
       </button>
     </div>
     <div id="playerControls">
       <h1 v-if="localEnabled && hintsMode">Random track, can you name it?</h1>
-      <button id="previousBtn" class="button-link" :disabled="!canGoBack" @click="previous">
-        <i class="bi bi-rewind-circle-fill"></i> Previous
+      <button id="previousBtn" class="button-link" aria-label="Previous" title="Previous" :disabled="!canGoBack" @click="previous">
+        <i class="bi bi-rewind-circle-fill" aria-hidden="true"></i>
       </button>
       <template v-if="localEnabled">
-        <button id="restartBtn" class="button-link" :disabled="!track" @click="restart">
-          <i class="bi bi-arrow-clockwise"></i> Restart
+        <button
+          id="playBtn"
+          class="button-link"
+          :aria-label="playerRef?.isPlaying ? 'Pause' : 'Play'"
+          :title="playerRef?.isPlaying ? 'Pause' : 'Play'"
+          :disabled="!audioSrc || !playerRef || playerRef.loading"
+          @click="togglePlayback"
+        >
+          <i
+            :class="playerRef?.isPlaying ? 'bi bi-pause-circle-fill' : 'bi bi-play-circle-fill'"
+            aria-hidden="true"
+          ></i>
         </button>
       </template>
-      <button id="nextBtn" class="button-link" @click="next">
-        <i class="bi bi-fast-forward-circle-fill"></i> Next
+      <button id="nextBtn" class="button-link" aria-label="Next" title="Next" @click="next">
+        <i class="bi bi-fast-forward-circle-fill" aria-hidden="true"></i>
       </button>
       <HowlerPlayer
         v-if="localEnabled"
@@ -535,6 +608,10 @@ function onEnded(): void {
 </template>
 
 <style scoped>
+#playBtn .bi {
+  font-size: 2em;
+}
+
 .yaml {
   text-align: left;
   font-family: monospace;
@@ -546,7 +623,7 @@ function onEnded(): void {
   width: 822px;
   max-width: 100%;
   margin-inline: auto;
-  margin-bottom: 28px;
+  margin-bottom: 54px;
 }
 
 .cover-toggle {
@@ -581,11 +658,11 @@ function onEnded(): void {
   overflow: auto;
   font-size: clamp(12px, 3.9cqi, 1em);
   transform-origin: bottom left;
-  transition: transform 250ms ease, opacity 250ms ease, visibility 250ms;
+  transition: transform 600ms ease, opacity 600ms ease, visibility 600ms;
 }
 
 .info-minimized .cover-info {
-  transform: translateY(28px) scaleY(0);
+  transform: translateY(42px) scaleY(0);
   opacity: 0;
   visibility: hidden;
 }
@@ -600,17 +677,21 @@ function onEnded(): void {
   background-color: transparent;
 }
 
+.cover-info .track-info td a {
+  font-weight: 600;
+}
+
 .cover-info-bar {
   position: absolute;
   top: 100%;
   left: 0;
   width: 100%;
-  height: 28px;
+  height: 42px;
   padding: 0 8px;
   border: 0;
   background: #333;
   color: white;
-  font-size: 16px;
+  font-size: 24px;
   cursor: pointer;
 }
 
@@ -620,7 +701,11 @@ function onEnded(): void {
 
 @media (prefers-reduced-motion: reduce) {
   .cover-info {
-    transition: none;
+    transition: opacity 600ms ease, visibility 600ms;
+  }
+
+  .info-minimized .cover-info {
+    transform: none;
   }
 }
 </style>
