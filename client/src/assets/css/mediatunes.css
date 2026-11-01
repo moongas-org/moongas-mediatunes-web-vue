@@ -91,7 +91,8 @@ th, td {
   text-align: center;
 }
 
-.track-info th {
+.track-info th,
+.source-properties th {
   background-color: #0d1117;
   text-align: right;
   padding-right: 8px;
@@ -100,13 +101,15 @@ th, td {
   color: #26951e;
 }
 
-.track-info td {
+.track-info td,
+.source-properties td {
   background-color: #0d1117;
   text-align: left;
   padding-left: 8px;
 }
 
-.track-info td a {
+.track-info td a,
+.source-properties td {
   color: #ab16f6;
 }
 

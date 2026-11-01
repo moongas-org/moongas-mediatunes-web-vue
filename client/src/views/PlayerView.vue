@@ -652,7 +652,7 @@ function onEnded(): void {
                   <table class="source-properties" :aria-label="`${row.kind} ${index + 1} properties`">
                     <tbody>
                       <tr v-for="(value, key) in row.item" :key="key">
-                        <th scope="row">{{ key }}</th>
+                        <th scope="row">{{ key }}:</th>
                         <td>{{ value }}</td>
                       </tr>
                     </tbody>
@@ -697,6 +697,30 @@ function onEnded(): void {
   vertical-align: top;
 }
 
+.track-sources {
+  border-collapse: separate;
+  border-spacing: 0 4px;
+}
+
+.track-sources > thead > tr > th,
+.track-sources > tbody > tr > th,
+.track-sources > tbody > tr > td {
+  border: 1px solid #666;
+  padding: 8px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.track-sources > thead > tr > th + th {
+  border-left: 4px solid transparent;
+  background-clip: padding-box;
+  box-shadow: inset 1px 0 #666;
+}
+
+.track-sources > tbody > tr > td {
+  border-left: 0;
+}
+
 .track-sources > thead > tr > th:first-child,
 .track-sources > tbody > tr > th {
   width: 24%;
@@ -704,6 +728,11 @@ function onEnded(): void {
 
 .source-properties th {
   width: 35%;
+  text-align: right;
+}
+
+.source-properties td {
+  font-weight: 600;
 }
 
 #playBtn .bi {
