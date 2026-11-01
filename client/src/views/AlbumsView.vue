@@ -57,9 +57,7 @@ const maxResults = computed(() => configState.config?.maxResultsAlbumCovers ?? 5
 
 const MIN_COLUMNS = 1
 const MAX_COLUMNS = 7
-const columns = ref(
-  Math.min(MAX_COLUMNS, Math.max(MIN_COLUMNS, Math.floor(window.innerWidth / 600))),
-)
+const columns = ref(5)
 
 function zoomIn(): void {
   columns.value = Math.max(MIN_COLUMNS, columns.value - 1)
@@ -69,7 +67,7 @@ function zoomOut(): void {
   columns.value = Math.min(MAX_COLUMNS, columns.value + 1)
 }
 
-const showCaptions = ref(true)
+const showCaptions = ref(false)
 </script>
 
 <template>

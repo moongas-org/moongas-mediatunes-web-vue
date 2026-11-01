@@ -68,10 +68,11 @@ export function sidecarPath(mediaPath: string, ext: string): string {
   return mediaPath.replace(/\.[^./]+$/, '') + ext
 }
 
-/** Fetch a text sidecar file (e.g. ".txt"/".lrc" lyrics) for a media file via getfile; throws if unavailable. */
-async function fetchSidecarText(mediaPath: string, ext: string): Promise<string> {
-  const url = getfileUrl(sidecarPath(mediaPath, ext))
-  const resp = await fetch(url)
+/** Fetch optional text via getfile; a missing file is unavailable, other failures throw. */
+async function fetchFileText(path: string, signal?: AbortSignal): Promise<string | null> {
+  const url = getfileUrl(path)
+  const resp = await fetch(url, { signal })
+  if (resp.status === 404) return null
   if (!resp.ok) {
     throw new Error(`GET ${url} failed: ${resp.status} ${resp.statusText}`)
   }
@@ -113,5 +114,8 @@ export const api = {
 
   randomTrack: (query: LocationQuery) => fetchJson<TrackInfo>('/random-track', query),
 
-  lyrics: (mediaPath: string, ext: '.txt' | '.lrc') => fetchSidecarText(mediaPath, ext),
+  fileText: fetchFileText,
+
+  lyrics: (mediaPath: string, ext: '.txt' | '.lrc') =>
+    fetchFileText(sidecarPath(mediaPath, ext)),
 }

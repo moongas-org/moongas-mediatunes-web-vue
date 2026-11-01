@@ -76,6 +76,13 @@ look up the selected track's ID in `/api/tracks` and request
 path, not the track's YAML path. The same lookup applies to resumed tracks and
 Previous/Next history navigation. Empty media-file results display an error.
 
+Track YAML, Album YAML, and Artist YAML buttons alongside Lyrics/LRC display
+available text fetched through `/getfile`. The track uses its YAML path;
+`album.yml` is fetched from the track's directory and `artist.yml` from its
+parent directory. Missing files leave their buttons disabled. Only one text
+panel is shown at a time, and Name That Tune keeps these buttons disabled
+until details are revealed.
+
 ### Filter by year range
 
 [moongas.org/mediatunes/albums?minYear=1990&maxYear=2004](https://moongas.org/mediatunes/albums?minYear=1990&maxYear=2004)

@@ -48,16 +48,25 @@ const trackInfoMinimized = ref(false)
 const playerRef = ref<InstanceType<typeof HowlerPlayer> | null>(null)
 
 type LyricsKind = 'txt' | 'lrc'
+type YamlKind = 'track' | 'album' | 'artist'
+type FileKind = LyricsKind | YamlKind
 /** Lyrics buttons: plain-text (.txt) and synced (.lrc) lyrics files. */
 const LYRICS_KINDS: { kind: LyricsKind; ext: '.txt' | '.lrc'; label: string }[] = [
   { kind: 'txt', ext: '.txt', label: 'Lyrics' },
   { kind: 'lrc', ext: '.lrc', label: 'LRC' },
 ]
-/** Lyrics text per kind for the current track; null if unavailable / not yet loaded. */
-const lyrics = ref<Record<LyricsKind, string | null>>({ txt: null, lrc: null })
+const YAML_KINDS: { kind: YamlKind; label: string }[] = [
+  { kind: 'track', label: 'Track YAML' },
+  { kind: 'album', label: 'Album YAML' },
+  { kind: 'artist', label: 'Artist YAML' },
+]
+const fileText = ref<Record<FileKind, string | null>>({
+  txt: null, lrc: null, track: null, album: null, artist: null,
+})
+const yamlLoading = ref(false)
+const yamlErrors = ref<Partial<Record<YamlKind, string>>>({})
 const lyricsLoading = ref(false)
-/** Which lyrics panel is open; only one at a time. */
-const shownLyrics = ref<LyricsKind | null>(null)
+const shownFile = ref<FileKind | null>(null)
 /** Incremented per track so stale lyrics responses are ignored. */
 let lyricsRequestId = 0
 
@@ -190,6 +199,41 @@ watch(
   { immediate: true },
 )
 
+watch(
+  () => track.value?.path,
+  async (path, _previous, onCleanup) => {
+    const controller = new AbortController()
+    onCleanup(() => { controller.abort() })
+    fileText.value.track = null
+    fileText.value.album = null
+    fileText.value.artist = null
+    yamlErrors.value = {}
+    shownFile.value = null
+    yamlLoading.value = Boolean(path)
+    if (!path) return
+    const albumDirectory = path.slice(0, path.lastIndexOf('/') + 1)
+    const artistDirectory = albumDirectory.replace(/[^/]+\/$/, '')
+    const paths: Record<YamlKind, string> = {
+      track: path,
+      album: `${albumDirectory}album.yml`,
+      artist: `${artistDirectory}artist.yml`,
+    }
+    await Promise.all(YAML_KINDS.map(async ({ kind, label }) => {
+      try {
+        const text = await api.fileText(paths[kind], controller.signal)
+        if (!controller.signal.aborted) fileText.value[kind] = text
+      } catch (e) {
+        if (controller.signal.aborted) return
+        const message = `Failed to load ${label}. ${e instanceof Error ? e.message : String(e)}`
+        yamlErrors.value[kind] = message
+        console.error(message)
+      }
+    }))
+    if (!controller.signal.aborted) yamlLoading.value = false
+  },
+  { immediate: true },
+)
+
 /**
  * Lyrics live alongside the media file with ".txt" / ".lrc" extensions.
  * They're fetched regardless of whether local playback is enabled.
@@ -198,8 +242,9 @@ watch(
   () => mediaPath.value,
   async (path) => {
     const requestId = ++lyricsRequestId
-    lyrics.value = { txt: null, lrc: null }
-    shownLyrics.value = null
+    fileText.value.txt = null
+    fileText.value.lrc = null
+    if (shownFile.value === 'txt' || shownFile.value === 'lrc') shownFile.value = null
     if (!path) {
       lyricsLoading.value = false
       return
@@ -209,27 +254,29 @@ watch(
       LYRICS_KINDS.map(({ ext }) => api.lyrics(path, ext).catch(() => null)),
     )
     if (requestId !== lyricsRequestId) return
-    lyrics.value = { txt: results[0], lrc: results[1] }
+    fileText.value.txt = results[0]
+    fileText.value.lrc = results[1]
     lyricsLoading.value = false
   },
   { immediate: true },
 )
 
-/** In "name that tune" mode, lyrics would give the answer away until revealed. */
-function lyricsDisabled(kind: LyricsKind): boolean {
-  return lyrics.value[kind] === null || (hintsMode.value && !hintsRevealed.value)
+/** Text files would give the answer away in "name that tune" mode. */
+function fileDisabled(kind: FileKind): boolean {
+  return fileText.value[kind] === null || (hintsMode.value && !hintsRevealed.value)
 }
 
-function lyricsTitle(kind: LyricsKind, label: string): string {
-  if (lyricsLoading.value) return `Loading ${label}…`
-  if (lyrics.value[kind] === null) return `${label} not available`
+function fileTitle(kind: FileKind, label: string): string {
+  const isLyrics = kind === 'txt' || kind === 'lrc'
+  if (isLyrics ? lyricsLoading.value : yamlLoading.value) return `Loading ${label}…`
+  if (!isLyrics && yamlErrors.value[kind]) return yamlErrors.value[kind]
+  if (fileText.value[kind] === null) return `${label} not available`
   return `Show/hide ${label}`
 }
 
-/** Toggle a lyrics panel; opening one hides the other. */
-function toggleLyrics(kind: LyricsKind): void {
-  if (lyricsDisabled(kind)) return
-  shownLyrics.value = shownLyrics.value === kind ? null : kind
+function toggleFile(kind: FileKind): void {
+  if (fileDisabled(kind)) return
+  shownFile.value = shownFile.value === kind ? null : kind
 }
 
 /** Links into the browse pages for the current track. */
@@ -434,13 +481,28 @@ function onEnded(): void {
         :key="l.kind"
         :id="`${l.kind}LyricsBtn`"
         class="button-link"
-        :class="{ active: shownLyrics === l.kind }"
-        :aria-pressed="shownLyrics === l.kind"
-        :disabled="lyricsDisabled(l.kind)"
-        :title="lyricsTitle(l.kind, l.label)"
-        @click="toggleLyrics(l.kind)"
+        :class="{ active: shownFile === l.kind }"
+        :aria-pressed="shownFile === l.kind"
+        :disabled="fileDisabled(l.kind)"
+        :title="fileTitle(l.kind, l.label)"
+        @click="toggleFile(l.kind)"
       >
         <i class="bi bi-music-note-list"></i> {{ l.label }}
+      </button>
+      <br />
+      <button
+        v-for="y in YAML_KINDS"
+        :key="y.kind"
+        :id="`${y.kind}YamlBtn`"
+        class="button-link"
+        :class="{ active: shownFile === y.kind }"
+        :aria-pressed="shownFile === y.kind"
+        :aria-controls="`${y.kind}Yaml`"
+        :disabled="fileDisabled(y.kind)"
+        :title="fileTitle(y.kind, y.label)"
+        @click="toggleFile(y.kind)"
+      >
+        <i class="bi bi-file-earmark-text"></i> {{ y.label }}
       </button>
       <br />
       <HintsPanel
@@ -451,10 +513,11 @@ function onEnded(): void {
     </div>
     <div v-if="error" class="error">{{ error }}</div>
     <div
-      v-if="shownLyrics && !lyricsDisabled(shownLyrics)"
-      :id="`${shownLyrics}Lyrics`"
+      v-if="shownFile && !fileDisabled(shownFile)"
+      :id="shownFile === 'txt' || shownFile === 'lrc' ? `${shownFile}Lyrics` : `${shownFile}Yaml`"
       class="lyrics"
-    >{{ lyrics[shownLyrics] }}</div>
+      :class="{ yaml: shownFile === 'track' || shownFile === 'album' || shownFile === 'artist' }"
+    >{{ fileText[shownFile] }}</div>
     <div v-show="!hintsMode || hintsRevealed" id="trackList">
       <div v-if="track && trackLinks" class="playback-options-ribbon">
         <router-link
@@ -472,6 +535,11 @@ function onEnded(): void {
 </template>
 
 <style scoped>
+.yaml {
+  text-align: left;
+  font-family: monospace;
+}
+
 .player-cover {
   position: relative;
   container-type: inline-size;

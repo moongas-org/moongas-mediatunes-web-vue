@@ -40,7 +40,7 @@ watch(() => route.query, load, { immediate: true })
         </tr>
         <tr>
           <td>
-            <router-link class="button-link" :to="{ path: '/albums', query: { albumartist: artist.name } }"
+            <router-link class="button-link" :to="{ path: '/albums', query: { artist: artist.name } }"
               >albums</router-link
             >
           </td>
