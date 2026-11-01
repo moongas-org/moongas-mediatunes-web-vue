@@ -20,6 +20,18 @@ export interface MediaFile {
   languageCode: string
 }
 
+export interface TrackMediaFile {
+  path: string
+  [key: string]: string | number | boolean | null
+}
+
+export interface TrackStreaming {
+  trackid: number
+  streamingservice: string
+  streamingtrackid: string
+  [key: string]: string | number | boolean | null
+}
+
 export interface AlbumInfo {
   artist: string
   album: string

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { loadNextTrack, loadTrackMediaPath } from '../src/nextTrack.ts'
+import { loadNextTrack, loadTrackId, loadTrackMediaPath } from '../src/nextTrack.ts'
 import type { TrackInfo } from '../src/types.ts'
 
 const current: TrackInfo = {
@@ -10,6 +10,14 @@ const current: TrackInfo = {
 }
 const other: TrackInfo = { ...current, path: '/other.mp3', title: 'Other' }
 const active = () => true
+
+test('resolves the exact track ID for media-file and streaming lookups', async () => {
+  const id = await loadTrackId(current, async (query) => {
+    assert.deepEqual(query, { artist: current.artist, album: current.album, title: current.title })
+    return { files: [{ id: 8, path: other.path }, { id: 42, path: current.path }] }
+  }, active)
+  assert.equal(id, 42)
+})
 
 test('initial load accepts the requested track without relaxing filters', async () => {
   let calls = 0

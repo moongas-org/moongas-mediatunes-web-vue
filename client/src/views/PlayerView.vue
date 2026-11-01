@@ -11,7 +11,7 @@ import QueryFilters from '../components/QueryFilters.vue'
 import { useGeoFilterFields } from '../data/geoFilters'
 import WebSearchLinks from '../components/WebSearchLinks.vue'
 import mp3LogoUrl from '../assets/svg/mp3_logo.svg'
-import { loadNextTrack, loadTrackMediaPath } from '../nextTrack'
+import { loadNextTrack, loadTrackId } from '../nextTrack'
 import {
   canGoBack,
   currentHistoryTrack,
@@ -19,7 +19,7 @@ import {
   moveHistory,
   pushHistory,
 } from '../playHistory'
-import type { FilterField, TrackInfo } from '../types'
+import type { FilterField, TrackInfo, TrackMediaFile, TrackStreaming } from '../types'
 
 /**
  * Port of player.html, including its inline jQuery script.
@@ -40,6 +40,15 @@ const router = useRouter()
 
 const track = ref<TrackInfo | null>(null)
 const mediaPath = ref<string | null>(null)
+const mediaFiles = ref<TrackMediaFile[]>([])
+const trackStreaming = ref<TrackStreaming[]>([])
+const mediaError = ref<string | null>(null)
+const streamingError = ref<string | null>(null)
+const sourcesLoading = ref(false)
+const sourceRows = computed(() => [
+  ...mediaFiles.value.map((item) => ({ kind: 'mediafile', item })),
+  ...trackStreaming.value.map((item) => ({ kind: 'trackstreaming', item })),
+])
 const error = ref<string | null>(null)
 /** Whether a newly selected track should start playing automatically. */
 const autoplayPending = ref(false)
@@ -240,13 +249,45 @@ watch(
     let active = true
     onCleanup(() => { active = false })
     mediaPath.value = null
+    mediaFiles.value = []
+    trackStreaming.value = []
+    mediaError.value = null
+    streamingError.value = null
+    sourcesLoading.value = Boolean(selected)
     if (!selected) return
     try {
-      const path = await loadTrackMediaPath(selected, api.tracks, api.mediafiles, () => active)
-      if (active) mediaPath.value = path
+      const trackId = await loadTrackId(selected, api.tracks, () => active)
+      if (trackId === null || !active) return
+      const query = { trackid: String(trackId) }
+      await Promise.all([
+        (async () => {
+          try {
+            const result = await api.mediafiles(query)
+            if (!active) return
+            mediaFiles.value = result.mediafiles
+            const first = result.mediafiles[0]
+            if (!first?.path) throw new Error(`No media file found for track ID ${trackId}.`)
+            mediaPath.value = first.path
+          } catch (e) {
+            if (!active) return
+            mediaError.value = `Failed to load media file. ${e instanceof Error ? e.message : String(e)}`
+          }
+        })(),
+        (async () => {
+          try {
+            const result = await api.trackstreaming(query)
+            if (active) trackStreaming.value = result.trackstreaming
+          } catch (e) {
+            if (!active) return
+            streamingError.value = `Failed to load track streaming. ${e instanceof Error ? e.message : String(e)}`
+          }
+        })(),
+      ])
     } catch (e) {
       if (!active) return
-      error.value = `Failed to load media file. ${e instanceof Error ? e.message : String(e)}`
+      mediaError.value = `Failed to load track sources. ${e instanceof Error ? e.message : String(e)}`
+    } finally {
+      if (active) sourcesLoading.value = false
     }
   },
   { immediate: true },
@@ -592,6 +633,36 @@ function onEnded(): void {
       :class="{ yaml: shownFile === 'track' || shownFile === 'album' || shownFile === 'artist' }"
     >{{ fileText[shownFile] }}</div>
     <div v-show="!hintsMode || hintsRevealed" id="trackList">
+      <div v-if="track" id="trackSources" :aria-busy="sourcesLoading">
+        <div v-if="mediaError" class="error" role="alert">{{ mediaError }}</div>
+        <div v-if="streamingError" class="error" role="alert">{{ streamingError }}</div>
+        <div v-if="sourcesLoading" role="status">Loading track sources...</div>
+        <div v-if="sourceRows.length" class="track-sources-table">
+          <table class="track-sources" aria-label="Track media files and streaming items">
+            <thead>
+              <tr>
+                <th scope="col">Type</th>
+                <th scope="col">Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, index) in sourceRows" :key="`${row.kind}-${index}`">
+                <th scope="row">{{ row.kind }}</th>
+                <td>
+                  <table class="source-properties" :aria-label="`${row.kind} ${index + 1} properties`">
+                    <tbody>
+                      <tr v-for="(value, key) in row.item" :key="key">
+                        <th scope="row">{{ key }}</th>
+                        <td>{{ value }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
       <div v-if="track && trackLinks" class="playback-options-ribbon">
         <router-link
           v-if="localEnabled"
@@ -608,6 +679,33 @@ function onEnded(): void {
 </template>
 
 <style scoped>
+.track-sources-table {
+  max-width: 100%;
+  margin-block: 16px;
+}
+
+.track-sources,
+.source-properties {
+  table-layout: fixed;
+}
+
+.track-sources-table th,
+.track-sources-table td {
+  width: auto;
+  overflow-wrap: anywhere;
+  text-align: left;
+  vertical-align: top;
+}
+
+.track-sources > thead > tr > th:first-child,
+.track-sources > tbody > tr > th {
+  width: 24%;
+}
+
+.source-properties th {
+  width: 35%;
+}
+
 #playBtn .bi {
   font-size: 2em;
 }

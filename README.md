@@ -72,7 +72,14 @@ deno task test      # player selection regression tests (Node.js 24+)
 
 The player and Name That Tune select metadata via `/api/random-track`, then
 look up the selected track's ID in `/api/tracks` and request
-`/api/mediafiles?trackid=<id>`. Playback and lyrics use the first media file's
+`/api/mediafiles?trackid=<id>` and `/api/trackstreaming?trackid=<id>`.
+A table below the player buttons and above the track links lists all media-file
+items first, followed by all track-streaming items. Each row has a source type
+and a nested two-column table of all returned property keys and values.
+Long keys and values wrap to fit the available horizontal space.
+Name That Tune hides this table until details are revealed. Lookup
+failures are displayed independently, so a streaming error does not prevent
+local playback. Playback and lyrics use the first media file's
 path, not the track's YAML path. The same lookup applies to resumed tracks and
 Previous/Next history navigation. Empty media-file results display an error.
 

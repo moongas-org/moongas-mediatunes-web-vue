@@ -8,13 +8,12 @@ interface TrackSelection {
   query: LocationQuery
 }
 
-/** Resolves the selected track's YAML path to its first playable media file. */
-export async function loadTrackMediaPath(
+/** Resolves the selected track's YAML path to its database ID. */
+export async function loadTrackId(
   track: TrackInfo,
   tracks: (query: LocationQuery) => Promise<{ files: Pick<MediaFile, 'id' | 'path'>[] }>,
-  mediafiles: (query: LocationQuery) => Promise<{ mediafiles: Pick<MediaFile, 'path'>[] }>,
   isCurrent: () => boolean,
-): Promise<string | null> {
+): Promise<number | null> {
   if (!isCurrent()) return null
   const result = await tracks({ artist: track.artist, album: track.album, title: track.title })
   if (!isCurrent()) return null
@@ -22,11 +21,23 @@ export async function loadTrackMediaPath(
   if (!selected || !Number.isInteger(selected.id)) {
     throw new Error(`Unable to find the track ID for ${track.path}.`)
   }
-  const media = await mediafiles({ trackid: String(selected.id) })
+  return selected.id
+}
+
+/** Resolves the selected track's YAML path to its first playable media file. */
+export async function loadTrackMediaPath(
+  track: TrackInfo,
+  tracks: (query: LocationQuery) => Promise<{ files: Pick<MediaFile, 'id' | 'path'>[] }>,
+  mediafiles: (query: LocationQuery) => Promise<{ mediafiles: Pick<MediaFile, 'path'>[] }>,
+  isCurrent: () => boolean,
+): Promise<string | null> {
+  const trackId = await loadTrackId(track, tracks, isCurrent)
+  if (trackId === null || !isCurrent()) return null
+  const media = await mediafiles({ trackid: String(trackId) })
   if (!isCurrent()) return null
   const first = media.mediafiles[0]
   if (!first?.path) {
-    throw new Error(`No media file found for track ID ${selected.id}.`)
+    throw new Error(`No media file found for track ID ${trackId}.`)
   }
   return first.path
 }

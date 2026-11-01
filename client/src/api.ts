@@ -10,6 +10,8 @@ import type {
   MediaFile,
   ServerConfig,
   TrackInfo,
+  TrackMediaFile,
+  TrackStreaming,
   WordCloudWord,
 } from './types'
 
@@ -95,7 +97,10 @@ export const api = {
     fetchJson<{ files: MediaFile[]; coverPath: string }>('/tracks', query),
 
   mediafiles: (query: LocationQuery) =>
-    fetchJson<{ mediafiles: Pick<MediaFile, 'path'>[] }>('/mediafiles', query),
+    fetchJson<{ mediafiles: TrackMediaFile[] }>('/mediafiles', query),
+
+  trackstreaming: (query: LocationQuery) =>
+    fetchJson<{ trackstreaming: TrackStreaming[] }>('/trackstreaming', query),
 
   artists: (query: LocationQuery) =>
     fetchJson<{ artists: ArtistCount[] }>('/artists', query),
