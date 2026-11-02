@@ -20,7 +20,12 @@
  *                       (default "/api")
  *   PUBLIC_BASE_PATH    public base path the SPA is served under
  *                       (default "/mediatunes")
+ *   SPOTIFY_API_CLIENT_ID / SPOTIFY_API_CLIENT_SECRET
+ *                       server-only Spotify OAuth app credentials
+ *   SPOTIFY_REDIRECT_URI registered public callback URL (recommended behind proxies)
  */
+
+import { createSpotifyHandler } from "./spotify.ts";
 
 const PORT = Number(Deno.env.get("PORT") ?? "8000");
 const BACKEND_URL = Deno.env.get("BACKEND_URL") ?? "http://127.0.0.1:5000";
@@ -29,6 +34,12 @@ const BACKEND_URL_PREFIX = (Deno.env.get("BACKEND_URL_PREFIX") ?? "/api").replac
 const PUBLIC_BASE_PATH = "/" +
   (Deno.env.get("PUBLIC_BASE_PATH") ?? "mediatunes").replace(/^\/+|\/+$/g, "");
 const DIST_DIR = new URL("../client/dist/", import.meta.url);
+const handleSpotify = createSpotifyHandler({
+  clientId: Deno.env.get("SPOTIFY_API_CLIENT_ID"),
+  clientSecret: Deno.env.get("SPOTIFY_API_CLIENT_SECRET"),
+  redirectUri: Deno.env.get("SPOTIFY_REDIRECT_URI"),
+  basePath: PUBLIC_BASE_PATH,
+});
 
 const MIME_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -154,6 +165,8 @@ async function handler(req: Request): Promise<Response> {
   } else {
     return new Response("Not Found", { status: 404 });
   }
+
+  if (pathname.startsWith("/spotify/")) return await handleSpotify(req);
 
   // Proxy the JSON API and media files to the backend.
   if (pathname.startsWith("/api/") || pathname.startsWith("/getfile/")) {

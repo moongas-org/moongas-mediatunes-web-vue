@@ -83,6 +83,136 @@ local playback. Playback and lyrics use the first media file's
 path, not the track's YAML path. The same lookup applies to resumed tracks and
 Previous/Next history navigation. Empty media-file results display an error.
 
+### Spotify Web Playback SDK
+
+When track-streaming results include `streaming_service: spotify`, the player
+shows a separate Spotify control panel for the **first** Spotify entry's
+`streaming_track_id` (for example `1DEs2q7YZCTy8M7kTYp3ia`). Legacy
+`streamingservice` / `streamingtrackid` keys are also accepted. An invalid first
+Spotify ID displays an error rather than selecting a different entry.
+
+Create a Spotify developer application with Web Playback SDK and Web API access.
+Register the exact callback URL, for example:
+
+- Production: `https://your-host/mediatunes/spotify/callback`
+- Development: `http://127.0.0.1:5173/mediatunes/spotify/callback`
+
+Spotify requires HTTPS except for explicit loopback IP addresses; `localhost`
+is not an accepted redirect hostname. Users need Spotify Premium and must be
+allowed to use your Spotify app (including its development-mode restrictions).
+Spotify's developer terms and streaming-use restrictions apply.
+
+Set these environment variables on the **Deno web server** before starting it:
+
+```sh
+export SPOTIFY_API_CLIENT_ID="your-client-id"
+export SPOTIFY_API_CLIENT_SECRET="your-client-secret"
+# Optional; recommended behind a reverse proxy. Must match the registered URL.
+export SPOTIFY_REDIRECT_URI="https://your-host/mediatunes/spotify/callback"
+deno task serve
+```
+
+Do not put the secret in client source, `VITE_*` variables, or committed files.
+The server performs Authorization Code OAuth, stores refresh tokens in memory,
+and uses an HttpOnly, SameSite session cookie. Only short-lived access tokens
+reach the SDK. Sessions expire after seven days and are lost on server restart;
+multi-instance deployments need sticky sessions or a shared session store.
+The callback must reach this web server, not the separate media-service backend.
+
+For Vite development, run the Deno web server alongside `deno task dev`, use
+`http://127.0.0.1:5173`, and set the server's `SPOTIFY_REDIRECT_URI` to the
+development URL above. Vite proxies `/mediatunes/spotify/` to
+`http://127.0.0.1:8000`; override `SPOTIFY_AUTH_URL` in the Vite environment if
+the Deno server runs elsewhere. No Spotify credentials are needed in Vite.
+
+#### Configuring Spotify with systemd
+
+Configure the **Deno web frontend service**, not `mediatunes-svc.service`.
+The latter runs the Python media backend and does not handle Spotify OAuth.
+Adding the variables only to that backend service will not enable Spotify.
+The commands below assume the frontend unit is named `mediatunes-web.service`,
+as in the [repository's service template](./mediatunes-web.service); substitute
+your installed frontend unit name if it differs.
+
+1. Deploy the updated code and build the frontend from this repository:
+
+   ```sh
+   deno task build
+   ```
+
+2. Create a drop-in for the frontend service:
+
+   ```sh
+   sudo systemctl edit mediatunes-web.service
+   ```
+
+   Add:
+
+   ```ini
+   [Service]
+   EnvironmentFile=/etc/mediatunes-spotify.env
+   ```
+
+3. Create a root-owned credentials file, readable only by root. On first setup:
+
+   ```sh
+   sudo install -o root -g root -m 600 /dev/null /etc/mediatunes-spotify.env
+   sudoedit /etc/mediatunes-spotify.env
+   ```
+
+   If the file already exists, use only `sudoedit`; the `install` command above
+   would overwrite its contents. Add these values without `export`:
+
+   ```ini
+   SPOTIFY_API_CLIENT_ID=your-client-id
+   SPOTIFY_API_CLIENT_SECRET=your-client-secret
+   SPOTIFY_REDIRECT_URI=https://moongas.org/mediatunes/spotify/callback
+   ```
+
+   Replace `moongas.org` with your actual public hostname. Systemd reads this
+   file before starting the process, so the service's configured `User` does
+   not need direct read access to it. Do not commit this file or share its
+   contents.
+
+4. Register the **exact same callback URL** in your Spotify developer app.
+   Ensure your reverse proxy routes `/mediatunes/spotify/*` to the **Deno
+   frontend server**, not the Python backend. The existing configuration that
+   sends all `/mediatunes/*` traffic to Deno already covers these routes.
+   Setting `SPOTIFY_REDIRECT_URI` is recommended behind a reverse proxy so the
+   server uses the public HTTPS callback rather than an internal address.
+
+5. Reload systemd and restart the frontend:
+
+   ```sh
+   sudo systemctl daemon-reload
+   sudo systemctl restart mediatunes-web.service
+   sudo systemctl status mediatunes-web.service --no-pager
+   ```
+
+   To inspect startup failures:
+
+   ```sh
+   sudo journalctl -u mediatunes-web.service -n 50 --no-pager
+   ```
+
+6. Open a track with a Spotify streaming entry, choose **Connect Spotify
+   Premium**, authorize the app, and press **Play** in the Spotify panel.
+
+No changes to the Python backend service are needed. After future credential
+changes, restart the frontend service to load the updated environment file.
+Restarting also clears the in-memory Spotify sessions, so users must sign in
+again.
+
+Choose **Connect Spotify Premium** to sign in, then **Play** to start the
+selected Spotify track. The SDK device initializes after sign-in; playback
+requires a button click (including on mobile). The panel includes play/pause,
+seek, volume, a link to the Spotify track, and disconnect controls. Starting
+Spotify pauses local audio and starting local audio pauses Spotify. Spotify
+does not autoplay or trigger continuous shuffle; existing Previous/Next buttons
+still select mediatunes tracks. Name That Tune hides the Spotify panel until
+details are revealed. Track changes and leaving the page disconnect the old
+Spotify device.
+
 Track YAML, Album YAML, and Artist YAML buttons alongside Lyrics/LRC display
 available text fetched through `/getfile`. The track uses its YAML path;
 `album.yml` is fetched from the track's directory and `artist.yml` from its

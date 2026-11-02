@@ -9,7 +9,7 @@ const props = defineProps<{
   artist?: string
   album?: string
 }>()
-const emit = defineEmits<{ ended: []; next: []; previous: [] }>()
+const emit = defineEmits<{ ended: []; next: []; previous: []; playing: [] }>()
 
 const isPlaying = ref(false)
 const loading = ref(false)
@@ -77,6 +77,7 @@ watch(
         if (sound !== next) return
         error.value = null
         isPlaying.value = true
+        emit('playing')
         setPlaybackState('playing')
         stopProgress()
         updateProgress()
@@ -224,7 +225,7 @@ onUnmounted(() => {
     setPlaybackState('none')
   }
 })
-defineExpose({ togglePlayback, restart, isPlaying, loading })
+defineExpose({ togglePlayback, restart, pause, isPlaying, loading })
 </script>
 
 <template>

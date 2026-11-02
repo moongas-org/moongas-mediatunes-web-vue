@@ -27,9 +27,11 @@ export interface TrackMediaFile {
 
 export interface TrackStreaming {
   trackid: number
-  streamingservice: string
-  streamingtrackid: string
-  [key: string]: string | number | boolean | null
+  streaming_service?: string
+  streaming_track_id?: string
+  streamingservice?: string
+  streamingtrackid?: string
+  [key: string]: string | number | boolean | null | undefined
 }
 
 export interface AlbumInfo {

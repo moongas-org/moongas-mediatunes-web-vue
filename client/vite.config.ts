@@ -26,6 +26,10 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
+      [`${base}spotify/`]: {
+        target: env.SPOTIFY_AUTH_URL ?? 'http://127.0.0.1:8000',
+        changeOrigin: false,
+      },
       // The client calls '<base>api/*' and '<base>getfile/*'. The dev server
       // strips the base prefix and forwards to the backend, which serves the
       // JSON API under apiPrefix (e.g. /api) and media at /getfile (no prefix).

@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { api, buildSearchParams, getfileUrl } from '../api'
 import AlbumCover from '../components/AlbumCover.vue'
 import HowlerPlayer from '../components/HowlerPlayer.vue'
+import SpotifyPlayer from '../components/SpotifyPlayer.vue'
+import { selectSpotifyTrack } from '../spotify'
 import { configState } from '../configStore'
 import { GENRES } from '../data/genres'
 import HintsPanel from '../components/HintsPanel.vue'
@@ -42,6 +44,8 @@ const track = ref<TrackInfo | null>(null)
 const mediaPath = ref<string | null>(null)
 const mediaFiles = ref<TrackMediaFile[]>([])
 const trackStreaming = ref<TrackStreaming[]>([])
+const spotifyTrack = computed(() => selectSpotifyTrack(trackStreaming.value))
+const spotifyRef = ref<InstanceType<typeof SpotifyPlayer> | null>(null)
 const mediaError = ref<string | null>(null)
 const streamingError = ref<string | null>(null)
 const sourcesLoading = ref(false)
@@ -589,7 +593,18 @@ function onEnded(): void {
         @ended="onEnded"
         @next="next"
         @previous="previous"
+        @playing="spotifyRef?.pause()"
       />
+      <template v-if="!hintsMode || hintsRevealed">
+        <SpotifyPlayer
+          v-if="spotifyTrack.trackId"
+          :key="spotifyTrack.trackId"
+          ref="spotifyRef"
+          :track-id="spotifyTrack.trackId"
+          @playing="playerRef?.pause()"
+        />
+        <div v-if="spotifyTrack.error" class="error" role="alert">{{ spotifyTrack.error }}</div>
+      </template>
       <button
         v-for="l in LYRICS_KINDS"
         :key="l.kind"
