@@ -77,6 +77,9 @@ A table below the player buttons and above the track links lists all media-file
 items first, followed by all track-streaming items. Each row has a source type
 and a nested two-column table of all returned property keys and values.
 Long keys and values wrap to fit the available horizontal space.
+When local playback is disabled, media-file rows remain visible with a
+**Local playback disabled** notice explaining that they are listed for reference
+only and media files are not served in this mode. Streaming rows are unchanged.
 The entire Track Sources section is hidden by default. The **Track Sources**
 button immediately to the left of **Track YAML** toggles its visibility,
 including source-loading status and errors. Selecting another track hides it

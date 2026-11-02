@@ -677,7 +677,13 @@ function onEnded(): void {
             </thead>
             <tbody>
               <tr v-for="(row, index) in sourceRows" :key="`${row.kind}-${index}`">
-                <th scope="row">{{ row.kind }}</th>
+                <th scope="row">
+                  {{ row.kind }}
+                  <div v-if="row.kind === 'mediafile' && !localEnabled" class="source-unavailable">
+                    <strong>Local playback disabled</strong>
+                    <span>Listed for reference only; media files are not served in this mode.</span>
+                  </div>
+                </th>
                 <td>
                   <table class="source-properties" :aria-label="`${row.kind} ${index + 1} properties`">
                     <tbody>
@@ -739,6 +745,20 @@ function onEnded(): void {
 
 .source-properties td {
   font-weight: 600;
+}
+
+.source-unavailable {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid #999;
+  border-radius: 8px;
+  font-size: 0.6em;
+  font-weight: normal;
+}
+
+.source-unavailable strong,
+.source-unavailable span {
+  display: block;
 }
 
 #playBtn .bi {
