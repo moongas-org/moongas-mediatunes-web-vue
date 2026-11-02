@@ -127,15 +127,15 @@ const singleAlbum = computed<{ artist: string; album: string } | null>(() => {
         <WebSearchLinks :artist="singleAlbum.artist" :album="singleAlbum.album" />
       </div>
       <div id="trackList">
-        <table class="w-100">
+        <table class="tracks-table bordered-table">
           <thead>
             <tr>
-              <th>Year</th>
-              <th>Genre</th>
-              <th>Artist</th>
-              <th>Album Artist</th>
-              <th>Album</th>
-              <th>Title</th>
+              <th scope="col">Year</th>
+              <th scope="col">Genre</th>
+              <th scope="col">Artist</th>
+              <th scope="col">Album Artist</th>
+              <th scope="col">Album</th>
+              <th scope="col">Title</th>
             </tr>
           </thead>
           <tbody>
@@ -184,6 +184,17 @@ const singleAlbum = computed<{ artist: string; album: string } | null>(() => {
 </template>
 
 <style scoped>
+.tracks-table {
+  table-layout: fixed;
+  margin-block: 16px;
+}
+
+.tracks-table th,
+.tracks-table td {
+  width: auto;
+  overflow-wrap: anywhere;
+}
+
 #coverImg {
   margin-inline: auto;
   max-width: 100%;

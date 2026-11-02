@@ -638,7 +638,7 @@ function onEnded(): void {
         <div v-if="streamingError" class="error" role="alert">{{ streamingError }}</div>
         <div v-if="sourcesLoading" role="status">Loading track sources...</div>
         <div v-if="sourceRows.length" class="track-sources-table">
-          <table class="track-sources" aria-label="Track media files and streaming items">
+          <table class="track-sources bordered-table" aria-label="Track media files and streaming items">
             <thead>
               <tr>
                 <th scope="col">Type</th>
@@ -695,30 +695,6 @@ function onEnded(): void {
   overflow-wrap: anywhere;
   text-align: left;
   vertical-align: top;
-}
-
-.track-sources {
-  border-collapse: separate;
-  border-spacing: 0 4px;
-}
-
-.track-sources > thead > tr > th,
-.track-sources > tbody > tr > th,
-.track-sources > tbody > tr > td {
-  border: 1px solid #666;
-  padding: 8px;
-  text-align: center;
-  vertical-align: middle;
-}
-
-.track-sources > thead > tr > th + th {
-  border-left: 4px solid transparent;
-  background-clip: padding-box;
-  box-shadow: inset 1px 0 #666;
-}
-
-.track-sources > tbody > tr > td {
-  border-left: 0;
 }
 
 .track-sources > thead > tr > th:first-child,
