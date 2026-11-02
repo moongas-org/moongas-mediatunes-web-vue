@@ -49,6 +49,7 @@ const spotifyRef = ref<InstanceType<typeof SpotifyPlayer> | null>(null)
 const mediaError = ref<string | null>(null)
 const streamingError = ref<string | null>(null)
 const sourcesLoading = ref(false)
+const sourcesVisible = ref(false)
 const sourceRows = computed(() => [
   ...mediaFiles.value.map((item) => ({ kind: 'mediafile', item })),
   ...trackStreaming.value.map((item) => ({ kind: 'trackstreaming', item })),
@@ -255,6 +256,7 @@ watch(
     mediaPath.value = null
     mediaFiles.value = []
     trackStreaming.value = []
+    sourcesVisible.value = false
     mediaError.value = null
     streamingError.value = null
     sourcesLoading.value = Boolean(selected)
@@ -620,6 +622,19 @@ function onEnded(): void {
       </button>
       <br />
       <button
+        id="trackSourcesBtn"
+        class="button-link"
+        :class="{ active: sourcesVisible }"
+        :aria-pressed="sourcesVisible"
+        :aria-expanded="sourcesVisible"
+        aria-controls="trackSources"
+        :disabled="!track || (hintsMode && !hintsRevealed)"
+        title="Show/hide Track Sources"
+        @click="sourcesVisible = !sourcesVisible"
+      >
+        <i class="bi bi-list-ul" aria-hidden="true"></i> Track Sources
+      </button>
+      <button
         v-for="y in YAML_KINDS"
         :key="y.kind"
         :id="`${y.kind}YamlBtn`"
@@ -648,7 +663,7 @@ function onEnded(): void {
       :class="{ yaml: shownFile === 'track' || shownFile === 'album' || shownFile === 'artist' }"
     >{{ fileText[shownFile] }}</div>
     <div v-show="!hintsMode || hintsRevealed" id="trackList">
-      <div v-if="track" id="trackSources" :aria-busy="sourcesLoading">
+      <div v-if="track" v-show="sourcesVisible" id="trackSources" :aria-busy="sourcesLoading">
         <div v-if="mediaError" class="error" role="alert">{{ mediaError }}</div>
         <div v-if="streamingError" class="error" role="alert">{{ streamingError }}</div>
         <div v-if="sourcesLoading" role="status">Loading track sources...</div>
