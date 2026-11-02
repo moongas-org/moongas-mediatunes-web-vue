@@ -64,22 +64,26 @@ function yearQuery(y: number): LocationQueryRaw {
                 <template v-else>{{ link.label }}</template>
               </router-link>
             </td>
-            <template v-if="year !== null">
-              <td>
-                <router-link :to="{ path: route.path, query: yearQuery(year - 1) }">{{ year - 1 }}</router-link>
-              </td>
-              <td>
-                <b>
-                  <router-link :to="{ path: route.path, query: yearQuery(year) }">{{ year }} </router-link>
-                </b>
-              </td>
-              <td>
-                <router-link :to="{ path: route.path, query: yearQuery(year + 1) }">{{ year + 1 }}</router-link>
-              </td>
-            </template>
           </tr>
         </tbody>
       </table>
     </div>
+    <nav v-if="year !== null" class="year-navigation" aria-label="Year navigation">
+      <router-link :to="{ path: route.path, query: yearQuery(year - 1) }">{{ year - 1 }}</router-link>
+      <b>
+        <router-link :to="{ path: route.path, query: yearQuery(year) }">{{ year }}</router-link>
+      </b>
+      <router-link :to="{ path: route.path, query: yearQuery(year + 1) }">{{ year + 1 }}</router-link>
+    </nav>
   </header>
 </template>
+
+<style scoped>
+.year-navigation {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1em;
+  padding: 4px;
+}
+</style>
