@@ -4,6 +4,7 @@
 
 export interface MediaFile {
   id: number
+  hasspotify: boolean
   path: string
   size: number
   format: string

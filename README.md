@@ -245,6 +245,23 @@ parent directory. Missing files leave their buttons disabled. Only one text
 panel is shown at a time, and Name That Tune keeps these buttons disabled
 until details are revealed.
 
+### Filter by Spotify availability
+
+Albums, Artists, Tracks, and Player (including Name That Tune) offer a
+**hasspotify** filter with `true` and `false` choices. The selection is stored
+in the URL and sent to the API as `hasspotify=true` or `hasspotify=false`.
+Removing the filter includes both. Filtering is performed by the backend;
+track API results expose the boolean `hasspotify` property.
+Artist sorting and the main Shuffle links preserve this filter.
+
+Examples:
+
+- `/mediatunes/albums?hasspotify=true`
+- `/mediatunes/artists?hasspotify=false`
+- `/mediatunes/tracks?hasspotify=true`
+- `/mediatunes/player?hasspotify=true`
+- `/mediatunes/name-that-tune/?hasspotify=true`
+
 ### Filter by year range
 
 [moongas.org/mediatunes/albums?minYear=1990&maxYear=2004](https://moongas.org/mediatunes/albums?minYear=1990&maxYear=2004)

@@ -60,6 +60,7 @@ const filterFields: FilterField[] = [
   { key: 'albumartist', label: 'Album artist' },
   { key: 'album', label: 'Album', multi: true },
   { key: 'genre', label: 'Genre', multi: true, options: GENRES },
+  { key: 'hasspotify', label: 'hasspotify', options: ['true', 'false'] },
   { key: 'year', label: 'Year', multi: true, type: 'number' },
   { key: 'minYear', label: 'Min year', type: 'number' },
   { key: 'maxYear', label: 'Max year', type: 'number' },

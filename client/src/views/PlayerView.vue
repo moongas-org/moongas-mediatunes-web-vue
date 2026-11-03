@@ -156,6 +156,7 @@ const filterFields: FilterField[] = [
   { key: 'title', label: 'title' },
   { key: 'genre', label: 'genre', multi: true, options: GENRES },
   { key: 'explicitCover', label: 'explicit cover', options: ['true', 'false'] },
+  { key: 'hasspotify', label: 'hasspotify', options: ['true', 'false'] },
   { key: 'year', label: 'year', multi: true, type: 'number' },
   { key: 'minYear', label: 'min year', type: 'number' },
   { key: 'maxYear', label: 'max year', type: 'number' },
