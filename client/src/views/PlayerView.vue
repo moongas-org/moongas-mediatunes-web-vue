@@ -5,6 +5,8 @@ import { api, buildSearchParams, getfileUrl } from '../api'
 import AlbumCover from '../components/AlbumCover.vue'
 import HowlerPlayer from '../components/HowlerPlayer.vue'
 import SpotifyPlayer from '../components/SpotifyPlayer.vue'
+import LrcPlayer from '../components/LrcPlayer.vue'
+import { parseLrc } from '../utils/lrc'
 import { selectSpotifyTrack } from '../spotify'
 import { configState } from '../configStore'
 import { GENRES } from '../data/genres'
@@ -108,6 +110,14 @@ const yamlLoading = ref(false)
 const yamlErrors = ref<Partial<Record<YamlKind, string>>>({})
 const lyricsLoading = ref(false)
 const shownFile = ref<FileKind | null>(null)
+const karaokeMode = ref(false)
+const karaokeSource = ref<'local' | 'spotify' | null>(null)
+const karaokePosition = ref(0)
+let localPosition = 0
+let spotifyPosition = 0
+const lrcLines = computed(() => parseLrc(fileText.value.lrc ?? ''))
+const karaokeAvailable = computed(() => lrcLines.value.some((line) => line.text.length > 0))
+const lyricsErrors = ref<Partial<Record<LyricsKind, string>>>({})
 /** Incremented per track so stale lyrics responses are ignored. */
 let lyricsRequestId = 0
 
@@ -166,6 +176,10 @@ let selectedTrackUrl: string | null = null
 onUnmounted(() => { trackRequestId++ })
 
 function showTrack(next: TrackInfo, autoplay: boolean): void {
+  karaokeSource.value = null
+  karaokePosition.value = 0
+  localPosition = 0
+  spotifyPosition = 0
   const samePath = next.path === track.value?.path
   error.value = null
   hintsRevealed.value = false
@@ -344,14 +358,27 @@ watch(
     const requestId = ++lyricsRequestId
     fileText.value.txt = null
     fileText.value.lrc = null
+    lyricsErrors.value = {}
     if (shownFile.value === 'txt' || shownFile.value === 'lrc') shownFile.value = null
     if (!path) {
       lyricsLoading.value = false
       return
     }
     lyricsLoading.value = true
+    lyricsErrors.value = {}
     const results = await Promise.all(
-      LYRICS_KINDS.map(({ ext }) => api.lyrics(path, ext).catch(() => null)),
+      LYRICS_KINDS.map(async ({ kind, ext }) => {
+        try {
+          return await api.lyrics(path, ext)
+        } catch (e) {
+          if (requestId === lyricsRequestId) {
+            const message = `Failed to load ${kind.toUpperCase()} lyrics. ${e instanceof Error ? e.message : String(e)}`
+            lyricsErrors.value[kind] = message
+            console.error(message)
+          }
+          return null
+        }
+      }),
     )
     if (requestId !== lyricsRequestId) return
     fileText.value.txt = results[0]
@@ -402,6 +429,22 @@ const trackLinks = computed(() => {
 
 function togglePlayback(): void {
   playerRef.value?.togglePlayback()
+}
+
+function startKaraoke(source: 'local' | 'spotify'): void {
+  karaokeSource.value = source
+  karaokePosition.value = source === 'local' ? localPosition : spotifyPosition
+}
+
+function updateKaraokePosition(source: 'local' | 'spotify', seconds: number): void {
+  if (source === 'local') localPosition = seconds
+  else spotifyPosition = seconds
+  if (karaokeSource.value === source) karaokePosition.value = seconds
+}
+
+function onLocalPlaying(): void {
+  void spotifyRef.value?.pause()
+  startKaraoke('local')
 }
 
 function restart(): void {
@@ -560,6 +603,11 @@ function onEnded(): void {
           aria-hidden="true"
         ></i>
       </button>
+      <LrcPlayer
+        v-if="karaokeMode && karaokeAvailable && karaokeSource"
+        :lines="lrcLines"
+        :position="karaokePosition"
+      />
     </div>
     <div id="playerControls">
       <h1 v-if="localEnabled && hintsMode">Random track, can you name it?</h1>
@@ -595,7 +643,8 @@ function onEnded(): void {
         @ended="onEnded"
         @next="next"
         @previous="previous"
-        @playing="spotifyRef?.pause()"
+        @playing="onLocalPlaying"
+        @progress="updateKaraokePosition('local', $event)"
       />
       <template v-if="!hintsMode || hintsRevealed">
         <SpotifyPlayer
@@ -604,9 +653,15 @@ function onEnded(): void {
           ref="spotifyRef"
           :track-id="spotifyTrack.trackId"
           @playing="playerRef?.pause()"
+          @started="startKaraoke('spotify')"
+          @progress="updateKaraokePosition('spotify', $event)"
         />
         <div v-if="spotifyTrack.error" class="error" role="alert">{{ spotifyTrack.error }}</div>
       </template>
+      <label v-if="karaokeAvailable" class="karaoke-option">
+        <input v-model="karaokeMode" type="checkbox" :disabled="hintsMode && !hintsRevealed" />
+        Karaoke Mode
+      </label>
       <button
         v-for="l in LYRICS_KINDS"
         :key="l.kind"
@@ -656,6 +711,7 @@ function onEnded(): void {
       />
     </div>
     <div v-if="error" class="error">{{ error }}</div>
+    <div v-for="(message, kind) in lyricsErrors" :key="kind" class="error" role="alert">{{ message }}</div>
     <div
       v-if="shownFile && !fileDisabled(shownFile)"
       :id="shownFile === 'txt' || shownFile === 'lrc' ? `${shownFile}Lyrics` : `${shownFile}Yaml`"

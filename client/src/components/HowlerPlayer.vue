@@ -9,7 +9,7 @@ const props = defineProps<{
   artist?: string
   album?: string
 }>()
-const emit = defineEmits<{ ended: []; next: []; previous: []; playing: [] }>()
+const emit = defineEmits<{ ended: []; next: []; previous: []; playing: []; progress: [seconds: number] }>()
 
 const isPlaying = ref(false)
 const loading = ref(false)
@@ -29,6 +29,7 @@ function formatTime(seconds: number): string {
 }
 
 const seekText = computed(() => `${formatTime(position.value)} of ${formatTime(duration.value)}`)
+watch(position, (seconds) => emit('progress', seconds), { flush: 'sync' })
 
 function updateProgress(): void {
   if (!sound) return

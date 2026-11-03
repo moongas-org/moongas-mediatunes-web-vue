@@ -91,6 +91,23 @@ local playback. Playback and lyrics use the first media file's
 path, not the track's YAML path. The same lookup applies to resumed tracks and
 Previous/Next history navigation. Empty media-file results display an error.
 
+### Karaoke Mode
+
+When the selected media file has usable timestamped `.lrc` lyrics, a
+**Karaoke Mode** checkbox appears in the player. Enable it and start local or
+Spotify playback to show synchronized lyrics over the album cover and any
+expanded track information. The active line is highlighted with up to two
+preceding and two following lines. Seeking updates the lyrics, and pausing
+keeps the overlay visible at the paused position.
+
+The checkbox is remembered while the player view remains open, including
+across track changes. Tracks without timed LRC lyrics show neither the checkbox
+nor the overlay. Name That Tune disables Karaoke Mode until details are
+revealed. Turning the checkbox off removes the overlay without stopping audio.
+The existing LRC button still displays the original text independently.
+Standard minute/second timestamps, fractional seconds, repeated timestamps,
+and millisecond `[offset:...]` metadata are supported.
+
 ### Spotify Web Playback SDK
 
 When track-streaming results include `streaming_service: spotify`, the player

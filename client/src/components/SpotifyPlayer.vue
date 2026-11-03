@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   loadSpotifySDK, spotifyAccessToken, spotifyAuth, spotifyLoginUrl,
@@ -8,7 +8,7 @@ import {
 import spotifyLogoUrl from '../assets/svg/Spotify_icon.svg'
 
 const props = defineProps<{ trackId: string }>()
-const emit = defineEmits<{ playing: [] }>()
+const emit = defineEmits<{ playing: []; started: []; progress: [seconds: number] }>()
 const route = useRoute()
 const router = useRouter()
 const configured = ref(false)
@@ -24,10 +24,14 @@ let player: SpotifyPlayer | undefined
 let deviceId: string | undefined
 let active = true
 let progressTimer: ReturnType<typeof setInterval> | undefined
+let lyricsTimer: ReturnType<typeof setInterval> | undefined
+let stateTime = 0
+let statePosition = 0
 let cancelConnection: (() => void) | undefined
 const playbackController = new AbortController()
 const uri = computed(() => `spotify:track:${props.trackId}`)
 const loginUrl = computed(() => spotifyLoginUrl(router.resolve(route.fullPath).href))
+watch(position, (ms) => emit('progress', ms / 1000), { flush: 'sync' })
 
 function message(reason: unknown): string {
   return reason instanceof Error ? reason.message : String(reason)
@@ -58,8 +62,11 @@ function updateState(state: SpotifyState | null): void {
   if (!active) return
   const playing = Boolean(state && !state.paused)
   if (playing && !isPlaying.value) emit('playing')
+  if (playing) emit('started')
   isPlaying.value = playing
+  stateTime = performance.now()
   if (state) {
+    statePosition = state.position
     position.value = state.position
     duration.value = state.duration
   }
@@ -69,6 +76,8 @@ function disconnect(): void {
   cancelConnection?.()
   cancelConnection = undefined
   clearInterval(progressTimer)
+  clearInterval(lyricsTimer)
+  lyricsTimer = undefined
   progressTimer = undefined
   player?.disconnect()
   player = undefined
@@ -148,6 +157,9 @@ async function connect(): Promise<SpotifyPlayer | undefined> {
       if (active && player === next) error.value = message(reason)
     })
   }, 1000)
+  lyricsTimer = setInterval(() => {
+    if (isPlaying.value) position.value = Math.min(duration.value, statePosition + performance.now() - stateTime)
+  }, 250)
   return next
 }
 
@@ -196,8 +208,11 @@ async function togglePlayback(): Promise<void> {
 
 async function pause(): Promise<void> {
   if (!player || !deviceId) return
+  const current = player
   try {
-    await player.pause()
+    await current.pause()
+    const state = await current.getCurrentState()
+    if (player === current) updateState(state)
   } catch (reason) {
     if (active) error.value = message(reason)
   }
@@ -205,7 +220,11 @@ async function pause(): Promise<void> {
 
 async function seek(event: Event): Promise<void> {
   try {
-    await player?.seek(Number((event.target as HTMLInputElement).value))
+    const value = Number((event.target as HTMLInputElement).value)
+    await player?.seek(value)
+    statePosition = value
+    stateTime = performance.now()
+    position.value = value
   } catch (reason) {
     if (active) error.value = message(reason)
   }
