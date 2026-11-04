@@ -134,11 +134,13 @@ th, td {
 }
 
 .track-info td a,
+.source-properties td a,
 .source-properties td {
   color: #ab16f6;
 }
 
-.track-info td a:hover {
+.track-info td a:hover,
+.source-properties td a:hover {
   color: #eac1ff;
 }
 

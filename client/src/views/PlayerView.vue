@@ -750,7 +750,16 @@ function onEnded(): void {
                     <tbody>
                       <tr v-for="(value, key) in row.item" :key="key">
                         <th scope="row">{{ key }}:</th>
-                        <td>{{ value }}</td>
+                        <td>
+                          <a
+                            v-if="row.kind === 'trackstreaming' && key === 'streaming_track_url' && typeof value === 'string' && value"
+                            :href="value"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            >{{ value }}</a
+                          >
+                          <template v-else>{{ value }}</template>
+                        </td>
                       </tr>
                     </tbody>
                   </table>

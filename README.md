@@ -76,6 +76,8 @@ look up the selected track's ID in `/api/tracks` and request
 A table below the player buttons and above the track links lists all media-file
 items first, followed by all track-streaming items. Each row has a source type
 and a nested two-column table of all returned property keys and values.
+Streaming items' `streaming_track_url` values are hyperlinks that open in a
+new tab, with the same link colors and hover effect as the track info table.
 Long keys and values wrap to fit the available horizontal space.
 When local playback is disabled, media-file rows remain visible with a
 **Local playback disabled** notice explaining that they are listed for reference
