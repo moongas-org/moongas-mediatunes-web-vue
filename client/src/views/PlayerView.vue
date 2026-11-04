@@ -121,6 +121,10 @@ const lyricsErrors = ref<Partial<Record<LyricsKind, string>>>({})
 /** Incremented per track so stale lyrics responses are ignored. */
 let lyricsRequestId = 0
 
+watch(karaokeAvailable, (available) => {
+  karaokeMode.value = available
+})
+
 const localEnabled = computed(() => configState.config?.playbackMethodLocalEnabled ?? false)
 const hintsMode = computed(() => props.hints || route.query.hints === '1')
 
@@ -156,7 +160,7 @@ const filterFields: FilterField[] = [
   { key: 'title', label: 'title' },
   { key: 'genre', label: 'genre', multi: true, options: GENRES },
   { key: 'explicitCover', label: 'explicit cover', options: ['true', 'false'] },
-  { key: 'hasspotify', label: 'hasspotify', options: ['true', 'false'] },
+  { key: 'hasspotify', label: 'has spotify', options: ['true', 'false'] },
   { key: 'year', label: 'year', multi: true, type: 'number' },
   { key: 'minYear', label: 'min year', type: 'number' },
   { key: 'maxYear', label: 'max year', type: 'number' },

@@ -16,6 +16,7 @@ import musicBrainzLogoUrl from '../assets/svg/MusicBrainz_logo.svg'
 import wikipediaLogoUrl from '../assets/png/Wikipedia_logo.png'
 import soundcloudLogoUrl from '../assets/svg/SoundCloud_logo.svg'
 import lastFmLogoUrl from '../assets/svg/Lastfm_logo.svg'
+import internetArchiveLogoUrl from '../assets/svg/InternetArchive_logo.svg'
 
 /** Renders the ribbon of web-search playback links for a given artist/album(/title). */
 const props = withDefaults(
@@ -90,6 +91,10 @@ function isSoundcloudLink(url: string): boolean {
 
 function isLastFmLink(url: string): boolean {
   return url.toLowerCase().includes('last.fm')
+}
+
+function isInternetArchiveLink(url: string): boolean {
+  return url.toLowerCase().includes('archive.org')
 }
 </script>
 
@@ -178,6 +183,12 @@ function isLastFmLink(url: string): boolean {
     <img
       v-else-if="isLastFmLink(link.url)"
       :src="lastFmLogoUrl"
+      class="playback-link-icon"
+      alt=""
+    />
+    <img
+      v-else-if="isInternetArchiveLink(link.url)"
+      :src="internetArchiveLogoUrl"
       class="playback-link-icon"
       alt=""
     />
