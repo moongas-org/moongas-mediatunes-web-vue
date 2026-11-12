@@ -5,6 +5,9 @@
 export interface MediaFile {
   id: number
   hasspotify: boolean
+  hasmedia: boolean
+  haslyricslrc: boolean
+  haslyricstxt: boolean
   path: string
   size: number
   format: string

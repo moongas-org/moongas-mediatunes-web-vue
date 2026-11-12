@@ -247,14 +247,16 @@ parent directory. Missing files leave their buttons disabled. Only one text
 panel is shown at a time, and Name That Tune keeps these buttons disabled
 until details are revealed.
 
-### Filter by Spotify availability
+### Filter by media availability and lyrics
 
-Albums, Artists, Tracks, and Player (including Name That Tune) offer a
-**hasspotify** filter with `true` and `false` choices. The selection is stored
-in the URL and sent to the API as `hasspotify=true` or `hasspotify=false`.
-Removing the filter includes both. Filtering is performed by the backend;
-track API results expose the boolean `hasspotify` property.
-Artist sorting and the main Shuffle links preserve this filter.
+Albums, Artists, Tracks, and Player (including Name That Tune) offer boolean
+filters for **hasspotify** (has spotify), **hasmedia** (has media),
+**haslyricslrc** (has lyrics lrc), and **haslyricstxt** (has lyrics txt), each
+with `true` and `false` choices. The selection is stored in the URL and sent
+to the API using the same query parameter names. Removing a filter includes
+both matching and non-matching results. Filtering is performed by the backend;
+track API results expose these boolean properties. Artist sorting and the main
+Shuffle links preserve the filters.
 
 Examples:
 
@@ -263,6 +265,9 @@ Examples:
 - `/mediatunes/tracks?hasspotify=true`
 - `/mediatunes/player?hasspotify=true`
 - `/mediatunes/name-that-tune/?hasspotify=true`
+- `/mediatunes/tracks?hasmedia=true`
+- `/mediatunes/player?haslyricslrc=true`
+- `/mediatunes/albums?haslyricstxt=false`
 
 ### Filter by year range
 
