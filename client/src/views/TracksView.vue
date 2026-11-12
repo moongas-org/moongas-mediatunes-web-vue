@@ -56,17 +56,18 @@ const artistParam = computed(() => queryScalar(route.query, 'artist'))
 const maxResults = computed(() => configState.config?.maxResults ?? 50000)
 
 const filterFields: FilterField[] = [
-  { key: 'artist', label: 'Artist', multi: true },
-  { key: 'albumartist', label: 'Album artist' },
-  { key: 'album', label: 'Album', multi: true },
-  { key: 'genre', label: 'Genre', multi: true, options: GENRES },
+  { key: 'artist', label: 'artist', multi: true },
+  { key: 'albumartist', label: 'album artist' },
+  { key: 'album', label: 'album', multi: true },
+  { key: 'title', label: 'title', multi: true },
+  { key: 'genre', label: 'genre', multi: true, options: GENRES },
   { key: 'hasspotify', label: 'has spotify', options: ['true', 'false'] },
   { key: 'hasmedia', label: 'has media', options: ['true', 'false'] },
   { key: 'haslyricslrc', label: 'has lyrics lrc', options: ['true', 'false'] },
   { key: 'haslyricstxt', label: 'has lyrics txt', options: ['true', 'false'] },
-  { key: 'year', label: 'Year', multi: true, type: 'number' },
-  { key: 'minYear', label: 'Min year', type: 'number' },
-  { key: 'maxYear', label: 'Max year', type: 'number' },
+  { key: 'year', label: 'year', multi: true, type: 'number' },
+  { key: 'minYear', label: 'min year', type: 'number' },
+  { key: 'maxYear', label: 'max year', type: 'number' },
   ...useGeoFilterFields(),
 ]
 

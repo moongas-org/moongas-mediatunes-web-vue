@@ -281,6 +281,9 @@ Examples:
 
 [moongas.org/mediatunes/player?artist=Rush&album=Grace%20Under%20Pressure&title=The%20Body%20Electric](https://moongas.org/mediatunes/player?artist=Rush&album=Grace%20Under%20Pressure&title=The%20Body%20Electric)
 
+On the Tracks view, the `title` query parameter is available as the `title`
+filter.
+
 ## Screenshots
 
 [Screenshots](./doc/screenshots/README.md)
