@@ -1,6 +1,6 @@
 import { reactive } from 'vue'
 import { api } from '../api'
-import type { FilterField, FilterOption, GeoKind } from '../types'
+import type { FilterField, FilterOption, GeoKind, GeoValue } from '../types'
 import { COUNTRIES } from './countries'
 
 const geoOptions = reactive({
@@ -11,18 +11,22 @@ const geoOptions = reactive({
 
 type GeoKey = keyof typeof geoOptions
 
+export function geoValueLabel(value: GeoValue): string {
+  return typeof value === 'string' ? value : `${value.name} (${value.nameEn})`
+}
+
 async function loadKind(kind: GeoKind, key: GeoKey): Promise<void> {
   const { items } = await api.artistGeo(kind)
   const byValue = new Map<string, string[]>()
   for (const item of items) {
     const value = item.criteria[key]
     if (!value) continue
-    byValue.set(value, [...(byValue.get(value) ?? []), item.value])
+    byValue.set(value, [...(byValue.get(value) ?? []), geoValueLabel(item.value)])
   }
   // A city name shared by several places filters all of them, so label it by name alone.
   const options = [...byValue].map(([value, labels]) => ({
     value,
-    label: labels.length === 1 ? labels[0] : value,
+    label: kind === 'languages' ? labels[0] : labels.length === 1 ? labels[0] : value,
   }))
   options.sort((a, b) => a.label.localeCompare(b.label))
   geoOptions[key].splice(0, Infinity, ...options)

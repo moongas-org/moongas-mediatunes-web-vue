@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../api'
 import { configState } from '../configStore'
+import { geoValueLabel } from '../data/geoFilters'
 import { formatResults } from '../utils/format'
 import LoadingSpinner from '../components/LoadingSpinner.vue'
 import type { GeoCountItem, GeoKind } from '../types'
@@ -60,11 +61,11 @@ function itemQuery(item: GeoCountItem): Record<string, string> {
           <th>Count</th>
           <th>{{ geoType }}</th>
         </tr>
-        <tr v-for="item in items" :key="item.value">
+        <tr v-for="item in items" :key="JSON.stringify(item.criteria)">
           <td>{{ item.count }}</td>
           <td>
             <router-link :to="{ path: '/artists', query: itemQuery(item) }">{{
-              item.value
+              geoValueLabel(item.value)
             }}</router-link>
           </td>
         </tr>

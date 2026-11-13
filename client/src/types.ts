@@ -75,8 +75,8 @@ export interface ArtistInfo {
 export interface GeoCountItem {
   /** User-facing criteria name, e.g. "Country" */
   name: string
-  /** User-facing value, e.g. "United States" or "Huntsville (Alabama, United States)" */
-  value: string
+  /** User-facing value; language values include native and English names. */
+  value: GeoValue
   /** Filter criteria usable as router query params, e.g. { countryCode: "US" } */
   criteria: Record<string, string>
   count: number
@@ -119,6 +119,13 @@ export interface WordCloudWord {
 }
 
 export type GeoKind = 'countries' | 'regions' | 'cities' | 'languages'
+
+export interface LanguageName {
+  name: string
+  nameEn: string
+}
+
+export type GeoValue = string | LanguageName
 
 export type WordCloudType = 'genre' | 'artist'
 
