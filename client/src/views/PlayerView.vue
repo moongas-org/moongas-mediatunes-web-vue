@@ -877,6 +877,7 @@ function onEnded(): void {
 
 .cover-info {
   position: absolute;
+  z-index: 2;
   bottom: 0;
   left: 0;
   max-width: 100%;
