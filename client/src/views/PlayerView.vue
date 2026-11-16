@@ -701,7 +701,7 @@ function onEnded(): void {
         :title="fileTitle(l.kind, l.label)"
         @click="toggleFile(l.kind)"
       >
-        <i class="bi bi-music-note-list"></i> {{ l.label }}
+        <i class="bi bi-music-note-list"></i> <i class="bi bi-badge-cc"></i> {{ l.label }}
       </button>
       <br />
       <button
