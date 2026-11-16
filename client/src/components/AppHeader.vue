@@ -1,43 +1,53 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute, type LocationQueryRaw } from 'vue-router'
+import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import { configState } from '../configStore'
 
 const route = useRoute()
+const router = useRouter()
 
 interface NavLink {
   label: string
   path: string
-  italic?: boolean
-  /** Hide this link when the current path is one of these (mirrors header_impl_links.html). */
-  hiddenOn: string[]
   /** Only shown when local playback is enabled. */
   localOnly?: boolean
 }
 
 const links: NavLink[] = [
-  { label: 'albums', path: '/albums', hiddenOn: ['/albums'] },
-  { label: 'artists', path: '/artists', hiddenOn: ['/artists'] },
-  { label: 'genres', path: '/genres', hiddenOn: ['/genres'] },
-  { label: 'player', path: '/player', hiddenOn: ['/player'] },
+  { label: 'albums', path: '/albums' },
+  { label: 'artists', path: '/artists' },
+  { label: 'genres', path: '/genres' },
+  { label: 'player', path: '/player' },
   {
     label: 'name that tune',
     path: '/name-that-tune',
-    italic: true,
     localOnly: true,
-    hiddenOn: ['/name-that-tune'],
   },
-  { label: 'tracks', path: '/tracks', hiddenOn: ['/tracks'] },
+  { label: 'tracks', path: '/tracks' },
 ]
 
 const localEnabled = computed(() => configState.config?.playbackMethodLocalEnabled ?? false)
 
 const visibleLinks = computed(() =>
-  links.filter((l) => !l.hiddenOn.includes(route.path) && (!l.localOnly || localEnabled.value)),
+  links.filter((l) => !l.localOnly || localEnabled.value),
 )
 
-/** Open nav links in a new tab when on the player, to avoid disrupting playback. */
-const linkTarget = computed(() => (route.path === '/player' ? '_blank' : undefined))
+const selectedView = computed(() =>
+  visibleLinks.value.some((link) => link.path === route.path) ? route.path : '',
+)
+
+function changeView(event: Event): void {
+  const select = event.target
+  if (!(select instanceof HTMLSelectElement)) return
+  const path = select.value
+  select.value = selectedView.value
+  if (path === route.path) return
+  if (route.path === '/player') {
+    window.open(router.resolve(path).href, '_blank', 'noopener,noreferrer')
+  } else {
+    void router.push(path)
+  }
+}
 
 /** Year prev/next nav (header_impl_years.html); suppressed on routes with meta.noYears. */
 const year = computed<number | null>(() => {
@@ -55,18 +65,15 @@ function yearQuery(y: number): LocationQueryRaw {
 <template>
   <header>
     <div id="header">
-      <table class="no-border w-100">
-        <tbody>
-          <tr>
-            <td v-for="link in visibleLinks" :key="link.path">
-              <router-link :to="link.path" :target="linkTarget">
-                <i v-if="link.italic">{{ link.label }}</i>
-                <template v-else>{{ link.label }}</template>
-              </router-link>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <label class="view-navigation">
+        view
+        <select :value="selectedView" @change="changeView">
+          <option value="" disabled>Select a view</option>
+          <option v-for="link in visibleLinks" :key="link.path" :value="link.path">
+            {{ link.label }}
+          </option>
+        </select>
+      </label>
     </div>
     <nav v-if="year !== null" class="year-navigation" aria-label="Year navigation">
       <router-link :to="{ path: route.path, query: yearQuery(year - 1) }">{{ year - 1 }}</router-link>
@@ -79,6 +86,13 @@ function yearQuery(y: number): LocationQueryRaw {
 </template>
 
 <style scoped>
+.view-navigation {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 4px;
+}
+
 .year-navigation {
   display: flex;
   justify-content: center;
