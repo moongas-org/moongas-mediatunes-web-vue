@@ -51,6 +51,8 @@ export async function loadNextTrack(
 ): Promise<TrackSelection | null> {
   const filters: LocationQuery = { ...query }
   delete filters.hints
+  delete filters.slideTrackInfo
+  delete filters.trackInfoFadeDelay
   for (const key of Object.keys(filters)) {
     const value = filters[key]
     if (value === null || value === '' ||

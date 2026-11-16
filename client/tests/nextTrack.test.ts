@@ -45,7 +45,8 @@ test('different track is accepted immediately with all filters intact', async ()
 test('removes title, then album, then every remaining filter without mutating the URL', async () => {
   const query = {
     artist: 'Artist', album: 'Album', title: 'Current',
-    genre: ['Rock', 'Pop'], custom: 'value', hints: '1',
+    genre: ['Rock', 'Pop'], custom: 'value', hints: '1', slideTrackInfo: '1',
+    trackInfoFadeDelay: '1000',
   }
   const requests: unknown[] = []
   const result = await loadNextTrack(query, current.path, async (filters) => {
@@ -66,6 +67,8 @@ test('removes title, then album, then every remaining filter without mutating th
   assert.equal(query.album, 'Album')
   assert.deepEqual(query.genre, ['Rock', 'Pop'])
   assert.equal(query.hints, '1')
+  assert.equal(query.slideTrackInfo, '1')
+  assert.equal(query.trackInfoFadeDelay, '1000')
 })
 
 test('stops relaxing as soon as a different track is returned', async () => {

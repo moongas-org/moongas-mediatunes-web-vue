@@ -35,7 +35,10 @@ import type { FilterField, TrackInfo, TrackMediaFile, TrackStreaming } from '../
  * resumes the most recent track. Track info collapses after 10 seconds without
  * hover or keyboard focus; explicitly reopening it keeps it visible until the
  * next track. With ?hints=1 ("name that tune"),
- * track details and cover are hidden until the user reveals them.
+ * track details and cover are hidden until the user reveals them. Use
+ * ?slideTrackInfo=1 to slide and fade track info. The slide takes 2500ms and
+ * the fade takes 600ms, starting after 500ms by default; set
+ * trackInfoFadeDelay to a non-negative number of milliseconds to change that.
  */
 const props = defineProps<{ hints?: boolean }>()
 
@@ -127,6 +130,18 @@ watch(karaokeAvailable, (available) => {
 
 const localEnabled = computed(() => configState.config?.playbackMethodLocalEnabled ?? false)
 const hintsMode = computed(() => props.hints || route.query.hints === '1')
+const slideTrackInfo = computed(() => route.query.slideTrackInfo === '1')
+const trackInfoFadeDelayError = computed(() => {
+  const value = route.query.trackInfoFadeDelay
+  if (value === undefined) return null
+  if (typeof value === 'string' && value.trim() !== ''
+    && Number.isFinite(Number(value)) && Number(value) >= 0) return null
+  return 'Invalid trackInfoFadeDelay: use a non-negative number of milliseconds. Using 500ms.'
+})
+const trackInfoFadeDelay = computed(() => {
+  if (route.query.trackInfoFadeDelay === undefined || trackInfoFadeDelayError.value) return 500
+  return Number(route.query.trackInfoFadeDelay)
+})
 
 watch(
   [
@@ -170,10 +185,12 @@ const filterFields: FilterField[] = [
   ...useGeoFilterFields(),
 ]
 
-/** Filter params in the URL (excluding the "name that tune" hints flag). */
+/** Filter params in the URL (excluding player behavior flags). */
 function currentFilters(): string {
   const params = buildSearchParams(route.query)
   params.delete('hints')
+  params.delete('slideTrackInfo')
+  params.delete('trackInfoFadeDelay')
   return params.toString()
 }
 
@@ -214,6 +231,8 @@ async function loadRandomTrack(autoplay: boolean): Promise<void> {
     pushHistory(next, buildSearchParams(query).toString())
     showTrack(next, autoplay)
     if (route.query.hints !== undefined) query.hints = route.query.hints
+    if (route.query.slideTrackInfo !== undefined) query.slideTrackInfo = route.query.slideTrackInfo
+    if (route.query.trackInfoFadeDelay !== undefined) query.trackInfoFadeDelay = route.query.trackInfoFadeDelay
     const location = { path: route.path, query, hash: route.hash }
     const url = router.resolve(location).fullPath
     if (url !== route.fullPath) {
@@ -487,7 +506,8 @@ function onEnded(): void {
       v-show="!hintsMode || hintsRevealed"
       id="cover"
       class="player-cover"
-      :class="{ 'info-minimized': trackInfoMinimized }"
+      :class="{ 'info-minimized': trackInfoMinimized, 'slide-track-info': slideTrackInfo }"
+      :style="{ '--track-info-fade-delay': `${trackInfoFadeDelay}ms` }"
       @focusin="updateTrackInfoFocus"
       @focusout="updateTrackInfoFocus"
     >
@@ -719,6 +739,7 @@ function onEnded(): void {
       />
     </div>
     <div v-if="error" class="error">{{ error }}</div>
+    <div v-if="trackInfoFadeDelayError" class="error" role="alert">{{ trackInfoFadeDelayError }}</div>
     <div v-for="(message, kind) in lyricsErrors" :key="kind" class="error" role="alert">{{ message }}</div>
     <div
       v-if="shownFile && !fileDisabled(shownFile)"
@@ -892,6 +913,21 @@ function onEnded(): void {
   transform: translateY(42px) scaleY(0);
   opacity: 0;
   visibility: hidden;
+}
+
+.slide-track-info .cover-info {
+  transition: transform 2500ms ease,
+    opacity 600ms ease var(--track-info-fade-delay),
+    visibility 0s;
+}
+
+.slide-track-info.info-minimized .cover-info {
+  transform: translateY(100%);
+  opacity: 0;
+  visibility: hidden;
+  transition: transform 2500ms ease,
+    opacity 600ms ease var(--track-info-fade-delay),
+    visibility 0s linear max(2500ms, calc(var(--track-info-fade-delay) + 600ms));
 }
 
 .cover-info .track-info {
