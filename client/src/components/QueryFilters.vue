@@ -173,10 +173,19 @@ function optionsWith(field: FilterField, value: string): FilterOption[] {
       </button>
     </span>
 
-    <select v-if="addable.length" v-model="addKey" class="query-filter-add" @change="addPending">
-      <option value="" disabled>+ filter</option>
-      <option v-for="f in addable" :key="f.key" :value="f.key">{{ f.label }}</option>
-    </select>
+    <span v-if="addable.length" class="query-filter-add-control">
+      <i class="bi bi-funnel" aria-hidden="true"></i>
+      <select
+        v-model="addKey"
+        class="query-filter-add"
+        aria-label="Add filter"
+        title="Add filter"
+        @change="addPending"
+      >
+        <option value="" disabled>Add filter</option>
+        <option v-for="f in addable" :key="f.key" :value="f.key">{{ f.label }}</option>
+      </select>
+    </span>
   </div>
 </template>
 
@@ -199,6 +208,31 @@ function optionsWith(field: FilterField, value: string): FilterOption[] {
   border-radius: 8px;
   background-color: #333;
   color: white;
+}
+
+.query-filter-add-control {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.query-filter-add-control .bi {
+  position: absolute;
+  pointer-events: none;
+}
+
+.query-filter-add {
+  appearance: none;
+  width: 2.5em;
+  height: 2.5em;
+  color: transparent;
+  cursor: pointer;
+}
+
+.query-filter-add option {
+  color: white;
+  background-color: #1e1e1e;
 }
 
 .query-filter input {
