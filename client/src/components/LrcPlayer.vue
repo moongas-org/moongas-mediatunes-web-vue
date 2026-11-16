@@ -28,7 +28,7 @@ const visibleLines = computed(() => {
 .lrc-player {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: center;

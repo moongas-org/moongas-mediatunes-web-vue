@@ -6,6 +6,7 @@ import AlbumCover from '../components/AlbumCover.vue'
 import HowlerPlayer from '../components/HowlerPlayer.vue'
 import SpotifyPlayer from '../components/SpotifyPlayer.vue'
 import LrcPlayer from '../components/LrcPlayer.vue'
+import PanningText from '../components/PanningText.vue'
 import { parseLrc } from '../utils/lrc'
 import { selectSpotifyTrack } from '../spotify'
 import { configState } from '../configStore'
@@ -65,6 +66,7 @@ const autoplayPending = ref(false)
 /** "name that tune": details/cover stay hidden until Show Details is clicked. */
 const hintsRevealed = ref(false)
 const trackInfoMinimized = ref(false)
+const trackInfoMotion = ref(true)
 const trackInfoPinned = ref(false)
 const trackInfoHovered = ref(false)
 const trackInfoBarHovered = ref(false)
@@ -525,6 +527,7 @@ function onEnded(): void {
       <div
         id="coverTrackInfo"
         class="cover-info"
+        :class="{ 'motion-enabled': trackInfoMotion }"
         :inert="trackInfoMinimized"
         @mouseenter="trackInfoHovered = true"
         @mouseleave="trackInfoHovered = false"
@@ -533,84 +536,104 @@ function onEnded(): void {
           <tr>
             <th>Title:</th>
             <td>
-              <a id="linkTitle" href="#" @click.prevent="togglePlayback">{{ track.title }}</a>
+              <PanningText :paused="trackInfoMinimized" :enabled="trackInfoMotion">
+                <a id="linkTitle" href="#" @click.prevent="togglePlayback">{{ track.title }}</a>
+              </PanningText>
             </td>
           </tr>
           <tr>
             <th>Artist:</th>
             <td>
-              <router-link id="linkArtist" :to="trackLinks.artist" target="_blank" rel="noopener noreferrer">{{
-                track.artist
-              }}</router-link>
+              <PanningText :paused="trackInfoMinimized" :enabled="trackInfoMotion">
+                <router-link id="linkArtist" :to="trackLinks.artist" target="_blank" rel="noopener noreferrer">{{
+                  track.artist
+                }}</router-link>
+              </PanningText>
             </td>
           </tr>
           <tr>
             <th>Album Artist:</th>
             <td>
-              <router-link
-                v-if="track.albumartist"
-                id="linkAlbumArtist"
-                :to="trackLinks.albumartist"
-                target="_blank"
-                rel="noopener noreferrer"
-                >{{ track.albumartist }}</router-link
-              >
+              <PanningText :paused="trackInfoMinimized" :enabled="trackInfoMotion">
+                <router-link
+                  v-if="track.albumartist"
+                  id="linkAlbumArtist"
+                  :to="trackLinks.albumartist"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >{{ track.albumartist }}</router-link
+                >
+              </PanningText>
             </td>
           </tr>
           <tr>
             <th>Album:</th>
             <td>
-              <router-link id="linkAlbum" :to="trackLinks.album" target="_blank" rel="noopener noreferrer">{{
-                track.album
-              }}</router-link>
+              <PanningText :paused="trackInfoMinimized" :enabled="trackInfoMotion">
+                <router-link id="linkAlbum" :to="trackLinks.album" target="_blank" rel="noopener noreferrer">{{
+                  track.album
+                }}</router-link>
+              </PanningText>
             </td>
           </tr>
           <tr>
             <th>Genre:</th>
             <td>
-              <router-link id="linkGenre" :to="trackLinks.genre" target="_blank" rel="noopener noreferrer">{{
-                track.genre
-              }}</router-link>
+              <PanningText :paused="trackInfoMinimized" :enabled="trackInfoMotion">
+                <router-link id="linkGenre" :to="trackLinks.genre" target="_blank" rel="noopener noreferrer">{{
+                  track.genre
+                }}</router-link>
+              </PanningText>
             </td>
           </tr>
           <tr>
             <th>Year:</th>
             <td>
-              <router-link id="linkYear" :to="trackLinks.year" target="_blank" rel="noopener noreferrer">{{
-                track.year
-              }}</router-link>
+              <PanningText :paused="trackInfoMinimized" :enabled="trackInfoMotion">
+                <router-link id="linkYear" :to="trackLinks.year" target="_blank" rel="noopener noreferrer">{{
+                  track.year
+                }}</router-link>
+              </PanningText>
             </td>
           </tr>
           <tr>
             <th>Country:</th>
             <td>
-              <router-link id="linkCountry" :to="trackLinks.country" target="_blank" rel="noopener noreferrer">{{
-                track.countryCode
-              }}</router-link>
+              <PanningText :paused="trackInfoMinimized" :enabled="trackInfoMotion">
+                <router-link id="linkCountry" :to="trackLinks.country" target="_blank" rel="noopener noreferrer">{{
+                  track.countryCode
+                }}</router-link>
+              </PanningText>
             </td>
           </tr>
           <tr>
             <th>Region:</th>
             <td>
-              <router-link id="linkRegion" :to="trackLinks.region" target="_blank" rel="noopener noreferrer">{{
-                track.regionCode
-              }}</router-link>
+              <PanningText :paused="trackInfoMinimized" :enabled="trackInfoMotion">
+                <router-link id="linkRegion" :to="trackLinks.region" target="_blank" rel="noopener noreferrer">{{
+                  track.regionCode
+                }}</router-link>
+              </PanningText>
             </td>
           </tr>
           <tr>
             <th>City:</th>
             <td>
-              <router-link id="linkCity" :to="trackLinks.city" target="_blank" rel="noopener noreferrer">{{
-                track.city
-              }}</router-link>
+              <PanningText :paused="trackInfoMinimized" :enabled="trackInfoMotion">
+                <router-link id="linkCity" :to="trackLinks.city" target="_blank" rel="noopener noreferrer">{{
+                  track.city
+                }}</router-link>
+              </PanningText>
             </td>
           </tr>
           <tr>
             <th>Language:</th>
             <td>
-              <router-link id="linkLanguage" :to="trackLinks.language" target="_blank" rel="noopener noreferrer">{{
-                track.languageCode
-              }}</router-link>
+              <PanningText :paused="trackInfoMinimized" :enabled="trackInfoMotion">
+                <router-link id="linkLanguage" :to="trackLinks.language" target="_blank" rel="noopener noreferrer">{{
+                  track.languageCode
+                }}</router-link>
+              </PanningText>
             </td>
           </tr>
         </table>
@@ -686,10 +709,16 @@ function onEnded(): void {
         />
         <div v-if="spotifyTrack.error" class="error" role="alert">{{ spotifyTrack.error }}</div>
       </template>
-      <label v-if="karaokeAvailable" class="karaoke-option">
-        <input v-model="karaokeMode" type="checkbox" :disabled="hintsMode && !hintsRevealed" />
-        Karaoke Mode
-      </label>
+      <div class="player-display-options">
+        <label class="track-info-motion-option">
+          <input v-model="trackInfoMotion" type="checkbox" />
+          Animate track info
+        </label>
+        <label v-if="karaokeAvailable" class="karaoke-option">
+          <input v-model="karaokeMode" type="checkbox" :disabled="hintsMode && !hintsRevealed" />
+          Karaoke Mode
+        </label>
+      </div>
       <button
         v-for="l in LYRICS_KINDS"
         :key="l.kind"
@@ -901,7 +930,7 @@ function onEnded(): void {
   z-index: 2;
   bottom: 0;
   left: 0;
-  max-width: 100%;
+  width: min(85%, 30em);
   max-height: 100%;
   overflow: auto;
   font-size: clamp(12px, 3.9cqi, 1em);
@@ -909,7 +938,12 @@ function onEnded(): void {
   transition: transform 600ms ease, opacity 600ms ease, visibility 600ms;
 }
 
+.cover-info.motion-enabled {
+  animation: track-info-pan 24s ease-in-out infinite alternate;
+}
+
 .info-minimized .cover-info {
+  animation-play-state: paused;
   transform: translateY(42px) scaleY(0);
   opacity: 0;
   visibility: hidden;
@@ -931,8 +965,29 @@ function onEnded(): void {
 }
 
 .cover-info .track-info {
+  width: 100%;
+  table-layout: fixed;
   margin: 0;
   background-color: rgba(13, 17, 23, 0.7);
+}
+
+.cover-info .track-info th {
+  width: 7em;
+}
+
+.cover-info:focus-within {
+  animation-play-state: paused;
+}
+
+@keyframes track-info-pan {
+  from {
+    left: 0;
+    translate: 0;
+  }
+  to {
+    left: 100%;
+    translate: -100%;
+  }
 }
 
 .cover-info .track-info th,
@@ -962,12 +1017,20 @@ function onEnded(): void {
   background-color: #7b3f3f;
 }
 
+.player-display-options {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-block: 8px;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .cover-info {
+  .cover-info:not(.motion-enabled) {
     transition: opacity 600ms ease, visibility 600ms;
   }
 
-  .info-minimized .cover-info {
+  .info-minimized .cover-info:not(.motion-enabled) {
     transform: none;
   }
 }

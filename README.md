@@ -70,6 +70,18 @@ deno task check     # runs vue-tsc on client/ and deno check on server/
 deno task test      # player selection regression tests (Node.js 24+)
 ```
 
+Visible track information slowly pans between the cover's left and right edges,
+taking 24 seconds in each direction. Long field values independently scroll
+back and forth within their cells, while short values stay still. Both motions
+pause when the information is minimized. Keyboard focus pauses the block and
+wraps the focused field so links remain usable. The **Animate track info**
+checkbox, grouped with **Karaoke Mode**, enables or disables both animations.
+It is checked by default, including when reduced motion is requested;
+uncheck it to stop panning and wrap long values.
+The selection remains in effect across tracks while the player is open.
+Existing auto-hide, reveal and
+optional slide/fade behavior is preserved.
+
 The player and Name That Tune select metadata via `/api/random-track`, then
 look up the selected track's ID in `/api/tracks` and request
 `/api/mediafiles?trackid=<id>` and `/api/trackstreaming?trackid=<id>`.
@@ -97,7 +109,7 @@ Previous/Next history navigation. Empty media-file results display an error.
 
 When the selected media file has usable timestamped `.lrc` lyrics, a
 **Karaoke Mode** checkbox appears in the player. Enable it and start local or
-Spotify playback to show synchronized lyrics over the album cover and any
+Spotify playback to show synchronized lyrics above the album cover and any
 expanded track information. The active line is highlighted with up to two
 preceding and two following lines. Seeking updates the lyrics, and pausing
 keeps the overlay visible at the paused position.
