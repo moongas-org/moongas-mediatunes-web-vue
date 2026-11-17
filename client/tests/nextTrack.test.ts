@@ -47,6 +47,7 @@ test('removes title, then album, then every remaining filter without mutating th
     artist: 'Artist', album: 'Album', title: 'Current',
     genre: ['Rock', 'Pop'], custom: 'value', hints: '1', slideTrackInfo: '1',
     trackInfoFadeDelay: '1000',
+    animdur: '45',
   }
   const requests: unknown[] = []
   const result = await loadNextTrack(query, current.path, async (filters) => {
@@ -69,6 +70,7 @@ test('removes title, then album, then every remaining filter without mutating th
   assert.equal(query.hints, '1')
   assert.equal(query.slideTrackInfo, '1')
   assert.equal(query.trackInfoFadeDelay, '1000')
+  assert.equal(query.animdur, '45')
 })
 
 test('stops relaxing as soon as a different track is returned', async () => {

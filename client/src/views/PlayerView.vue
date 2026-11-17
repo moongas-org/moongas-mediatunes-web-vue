@@ -33,13 +33,17 @@ import type { FilterField, TrackInfo, TrackMediaFile, TrackStreaming } from '../
  * playback is enabled, streams the file via /getfile and auto-advances to the
  * next random track when playback ends. Played tracks are kept in a cookie
  * history (see playHistory.ts) for the Previous/Next buttons, and the player
- * resumes the most recent track. Track info collapses after 10 seconds without
- * hover or keyboard focus; explicitly reopening it keeps it visible until the
+ * resumes the most recent track. Track info stays visible by default. With
+ * auto-hide enabled, it collapses after 10 seconds without hover or keyboard
+ * focus; explicitly reopening it keeps it visible until the
  * next track. With ?hints=1 ("name that tune"),
  * track details and cover are hidden until the user reveals them. Use
  * ?slideTrackInfo=1 to slide and fade track info. The slide takes 2500ms and
  * the fade takes 600ms, starting after 500ms by default; set
  * trackInfoFadeDelay to a non-negative number of milliseconds to change that.
+ * With track-info motion enabled, the overlay follows the inside perimeter
+ * counter-clockwise once every 30 seconds, staying upright. Set ?animdur=45
+ * to override the circuit duration with a positive integer number of seconds.
  */
 const props = defineProps<{ hints?: boolean }>()
 
@@ -67,6 +71,7 @@ const autoplayPending = ref(false)
 const hintsRevealed = ref(false)
 const trackInfoMinimized = ref(false)
 const trackInfoMotion = ref(true)
+const trackInfoAutoHide = ref(false)
 const trackInfoPinned = ref(false)
 const trackInfoHovered = ref(false)
 const trackInfoBarHovered = ref(false)
@@ -133,6 +138,17 @@ watch(karaokeAvailable, (available) => {
 const localEnabled = computed(() => configState.config?.playbackMethodLocalEnabled ?? false)
 const hintsMode = computed(() => props.hints || route.query.hints === '1')
 const slideTrackInfo = computed(() => route.query.slideTrackInfo === '1')
+const trackInfoAnimationDurationError = computed(() => {
+  const value = route.query.animdur
+  if (value === undefined) return null
+  if (typeof value === 'string' && /^\d+$/.test(value)
+    && Number.isSafeInteger(Number(value)) && Number(value) > 0) return null
+  return 'Invalid animdur: use a positive integer number of seconds. Using 30 seconds.'
+})
+const trackInfoAnimationDuration = computed(() => {
+  if (route.query.animdur === undefined || trackInfoAnimationDurationError.value) return 30
+  return Number(route.query.animdur)
+})
 const trackInfoFadeDelayError = computed(() => {
   const value = route.query.trackInfoFadeDelay
   if (value === undefined) return null
@@ -154,15 +170,16 @@ watch(
     trackInfoHovered,
     trackInfoBarHovered,
     trackInfoFocused,
+    trackInfoAutoHide,
   ],
-  ([selected, visible, minimized, pinned, hovered, barHovered, focused]) => {
+  ([selected, visible, minimized, pinned, hovered, barHovered, focused, autoHide]) => {
     clearTrackInfoHideTimer()
     if (!visible) {
       trackInfoHovered.value = false
       trackInfoBarHovered.value = false
       trackInfoFocused.value = false
     }
-    if (!selected || !visible || minimized || pinned || hovered || barHovered || focused) return
+    if (!autoHide || !selected || !visible || minimized || pinned || hovered || barHovered || focused) return
     trackInfoHideTimer = setTimeout(() => {
       trackInfoHideTimer = undefined
       trackInfoMinimized.value = true
@@ -193,6 +210,7 @@ function currentFilters(): string {
   params.delete('hints')
   params.delete('slideTrackInfo')
   params.delete('trackInfoFadeDelay')
+  params.delete('animdur')
   return params.toString()
 }
 
@@ -235,6 +253,7 @@ async function loadRandomTrack(autoplay: boolean): Promise<void> {
     if (route.query.hints !== undefined) query.hints = route.query.hints
     if (route.query.slideTrackInfo !== undefined) query.slideTrackInfo = route.query.slideTrackInfo
     if (route.query.trackInfoFadeDelay !== undefined) query.trackInfoFadeDelay = route.query.trackInfoFadeDelay
+    if (route.query.animdur !== undefined) query.animdur = route.query.animdur
     const location = { path: route.path, query, hash: route.hash }
     const url = router.resolve(location).fullPath
     if (url !== route.fullPath) {
@@ -509,7 +528,10 @@ function onEnded(): void {
       id="cover"
       class="player-cover"
       :class="{ 'info-minimized': trackInfoMinimized, 'slide-track-info': slideTrackInfo }"
-      :style="{ '--track-info-fade-delay': `${trackInfoFadeDelay}ms` }"
+      :style="{
+        '--track-info-fade-delay': `${trackInfoFadeDelay}ms`,
+        '--track-info-animation-duration': `${trackInfoAnimationDuration}s`,
+      }"
       @focusin="updateTrackInfoFocus"
       @focusout="updateTrackInfoFocus"
     >
@@ -714,6 +736,10 @@ function onEnded(): void {
           <input v-model="trackInfoMotion" type="checkbox" />
           Animate track info
         </label>
+        <label class="track-info-auto-hide-option">
+          <input v-model="trackInfoAutoHide" type="checkbox" />
+          Auto-hide track info
+        </label>
         <label v-if="karaokeAvailable" class="karaoke-option">
           <input v-model="karaokeMode" type="checkbox" :disabled="hintsMode && !hintsRevealed" />
           Karaoke Mode
@@ -769,6 +795,7 @@ function onEnded(): void {
     </div>
     <div v-if="error" class="error">{{ error }}</div>
     <div v-if="trackInfoFadeDelayError" class="error" role="alert">{{ trackInfoFadeDelayError }}</div>
+    <div v-if="trackInfoAnimationDurationError" class="error" role="alert">{{ trackInfoAnimationDurationError }}</div>
     <div v-for="(message, kind) in lyricsErrors" :key="kind" class="error" role="alert">{{ message }}</div>
     <div
       v-if="shownFile && !fileDisabled(shownFile)"
@@ -939,7 +966,7 @@ function onEnded(): void {
 }
 
 .cover-info.motion-enabled {
-  animation: track-info-pan 24s ease-in-out infinite alternate;
+  animation: track-info-perimeter var(--track-info-animation-duration, 30s) linear infinite;
 }
 
 .info-minimized .cover-info {
@@ -979,14 +1006,26 @@ function onEnded(): void {
   animation-play-state: paused;
 }
 
-@keyframes track-info-pan {
-  from {
+@keyframes track-info-perimeter {
+  0%, 100% {
     left: 0;
-    translate: 0;
+    bottom: 0;
+    translate: 0 0;
   }
-  to {
+  25% {
     left: 100%;
-    translate: -100%;
+    bottom: 0;
+    translate: -100% 0;
+  }
+  50% {
+    left: 100%;
+    bottom: 100%;
+    translate: -100% 100%;
+  }
+  75% {
+    left: 0;
+    bottom: 100%;
+    translate: 0 100%;
   }
 }
 

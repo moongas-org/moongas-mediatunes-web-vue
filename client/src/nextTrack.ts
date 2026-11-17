@@ -53,6 +53,7 @@ export async function loadNextTrack(
   delete filters.hints
   delete filters.slideTrackInfo
   delete filters.trackInfoFadeDelay
+  delete filters.animdur
   for (const key of Object.keys(filters)) {
     const value = filters[key]
     if (value === null || value === '' ||
