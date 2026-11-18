@@ -187,11 +187,12 @@ test('reports missing track IDs rather than using a YAML path for playback', asy
   }
 })
 
-test('reports empty media lists and missing media paths', async () => {
+test('returns no playback path for empty media lists and missing media paths', async () => {
   for (const mediafiles of [[], [{ path: '' }]]) {
-    await assert.rejects(loadTrackMediaPath(current, async () => ({
+    const path = await loadTrackMediaPath(current, async () => ({
       files: [{ id: 42, path: current.path }],
-    }), async () => ({ mediafiles }), active), /No media file found for track ID 42/)
+    }), async () => ({ mediafiles }), active)
+    assert.equal(path, null)
   }
 })
 

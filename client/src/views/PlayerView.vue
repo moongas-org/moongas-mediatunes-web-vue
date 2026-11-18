@@ -16,7 +16,7 @@ import QueryFilters from '../components/QueryFilters.vue'
 import { useGeoFilterFields } from '../data/geoFilters'
 import WebSearchLinks from '../components/WebSearchLinks.vue'
 import mp3LogoUrl from '../assets/svg/mp3_logo.svg'
-import { loadNextTrack, loadTrackId } from '../nextTrack'
+import { firstMediaPath, loadNextTrack, loadTrackId } from '../nextTrack'
 import {
   canGoBack,
   currentHistoryTrack,
@@ -333,9 +333,7 @@ watch(
             const result = await api.mediafiles(query)
             if (!active) return
             mediaFiles.value = result.mediafiles
-            const first = result.mediafiles[0]
-            if (!first?.path) throw new Error(`No media file found for track ID ${trackId}.`)
-            mediaPath.value = first.path
+            mediaPath.value = firstMediaPath(result.mediafiles)
           } catch (e) {
             if (!active) return
             mediaError.value = `Failed to load media file. ${e instanceof Error ? e.message : String(e)}`
@@ -808,6 +806,7 @@ function onEnded(): void {
         <div v-if="mediaError" class="error" role="alert">{{ mediaError }}</div>
         <div v-if="streamingError" class="error" role="alert">{{ streamingError }}</div>
         <div v-if="sourcesLoading" role="status">Loading track sources...</div>
+        <div v-else-if="!mediaError && !streamingError && !sourceRows.length" role="status">No track sources available.</div>
         <div v-if="sourceRows.length" class="track-sources-table">
           <table class="track-sources bordered-table" aria-label="Track media files and streaming items">
             <thead>

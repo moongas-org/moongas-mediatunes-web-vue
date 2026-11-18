@@ -24,7 +24,11 @@ export async function loadTrackId(
   return selected.id
 }
 
-/** Resolves the selected track's YAML path to its first playable media file. */
+export function firstMediaPath(mediafiles: readonly Pick<MediaFile, 'path'>[]): string | null {
+  return mediafiles[0]?.path || null
+}
+
+/** Resolves the selected track's YAML path to its first media file, if available. */
 export async function loadTrackMediaPath(
   track: TrackInfo,
   tracks: (query: LocationQuery) => Promise<{ files: Pick<MediaFile, 'id' | 'path'>[] }>,
@@ -35,11 +39,7 @@ export async function loadTrackMediaPath(
   if (trackId === null || !isCurrent()) return null
   const media = await mediafiles({ trackid: String(trackId) })
   if (!isCurrent()) return null
-  const first = media.mediafiles[0]
-  if (!first?.path) {
-    throw new Error(`No media file found for track ID ${trackId}.`)
-  }
-  return first.path
+  return firstMediaPath(media.mediafiles)
 }
 
 /** Returns a different track and the filters that selected it. */

@@ -103,7 +103,10 @@ the section is hidden so playback remains available. Lookup
 failures are displayed independently, so a streaming error does not prevent
 local playback. Playback and lyrics use the first media file's
 path, not the track's YAML path. The same lookup applies to resumed tracks and
-Previous/Next history navigation. Empty media-file results display an error.
+Previous/Next history navigation. Media files are optional: an empty media-file
+result leaves local playback and lyrics unavailable without an error, and any
+streaming sources still appear. If neither lookup returns sources, the section
+shows **No track sources available.**
 
 ### Karaoke Mode
 
