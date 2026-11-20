@@ -24,5 +24,8 @@
         "**/dist": true
     },
     "explorer.excludeGitIgnore": false,
-    "search.useIgnoreFiles": false
+    "search.useIgnoreFiles": false,
+    "cSpell.words": [
+        "albumartist"
+    ]
 }

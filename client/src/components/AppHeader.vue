@@ -74,6 +74,7 @@ function yearQuery(y: number): LocationQueryRaw {
           </option>
         </select>
       </label>
+      <span id="header-filter-controls"></span>
     </div>
     <nav v-if="year !== null" class="year-navigation" aria-label="Year navigation">
       <router-link :to="{ path: route.path, query: yearQuery(year - 1) }">{{ year - 1 }}</router-link>
@@ -86,11 +87,29 @@ function yearQuery(y: number): LocationQueryRaw {
 </template>
 
 <style scoped>
+#header {
+  --header-control-height: 1.3em;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+#header-filter-controls {
+  display: contents;
+}
+
 .view-navigation {
   display: inline-flex;
   align-items: center;
   gap: 0.5em;
   padding: 4px;
+}
+
+.view-navigation select {
+  box-sizing: border-box;
+  block-size: var(--header-control-height);
 }
 
 .year-navigation {

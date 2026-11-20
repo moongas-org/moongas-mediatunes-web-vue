@@ -6,7 +6,6 @@ import AlbumCover from '../components/AlbumCover.vue'
 import HowlerPlayer from '../components/HowlerPlayer.vue'
 import SpotifyPlayer from '../components/SpotifyPlayer.vue'
 import LrcPlayer from '../components/LrcPlayer.vue'
-import PanningText from '../components/PanningText.vue'
 import { parseLrc } from '../utils/lrc'
 import { selectSpotifyTrack } from '../spotify'
 import { configState } from '../configStore'
@@ -41,9 +40,6 @@ import type { FilterField, TrackInfo, TrackMediaFile, TrackStreaming } from '../
  * ?slideTrackInfo=1 to slide and fade track info. The slide takes 2500ms and
  * the fade takes 600ms, starting after 500ms by default; set
  * trackInfoFadeDelay to a non-negative number of milliseconds to change that.
- * With track-info motion enabled, the overlay follows the inside perimeter
- * counter-clockwise once every 30 seconds, staying upright. Set ?animdur=45
- * to override the circuit duration with a positive integer number of seconds.
  */
 const props = defineProps<{ hints?: boolean }>()
 
@@ -70,8 +66,8 @@ const autoplayPending = ref(false)
 /** "name that tune": details/cover stay hidden until Show Details is clicked. */
 const hintsRevealed = ref(false)
 const trackInfoMinimized = ref(false)
-const trackInfoMotion = ref(true)
 const trackInfoAutoHide = ref(false)
+const playerSettingsDialog = ref<HTMLDialogElement | null>(null)
 const trackInfoPinned = ref(false)
 const trackInfoHovered = ref(false)
 const trackInfoBarHovered = ref(false)
@@ -138,17 +134,6 @@ watch(karaokeAvailable, (available) => {
 const localEnabled = computed(() => configState.config?.playbackMethodLocalEnabled ?? false)
 const hintsMode = computed(() => props.hints || route.query.hints === '1')
 const slideTrackInfo = computed(() => route.query.slideTrackInfo === '1')
-const trackInfoAnimationDurationError = computed(() => {
-  const value = route.query.animdur
-  if (value === undefined) return null
-  if (typeof value === 'string' && /^\d+$/.test(value)
-    && Number.isSafeInteger(Number(value)) && Number(value) > 0) return null
-  return 'Invalid animdur: use a positive integer number of seconds. Using 30 seconds.'
-})
-const trackInfoAnimationDuration = computed(() => {
-  if (route.query.animdur === undefined || trackInfoAnimationDurationError.value) return 30
-  return Number(route.query.animdur)
-})
 const trackInfoFadeDelayError = computed(() => {
   const value = route.query.trackInfoFadeDelay
   if (value === undefined) return null
@@ -253,7 +238,6 @@ async function loadRandomTrack(autoplay: boolean): Promise<void> {
     if (route.query.hints !== undefined) query.hints = route.query.hints
     if (route.query.slideTrackInfo !== undefined) query.slideTrackInfo = route.query.slideTrackInfo
     if (route.query.trackInfoFadeDelay !== undefined) query.trackInfoFadeDelay = route.query.trackInfoFadeDelay
-    if (route.query.animdur !== undefined) query.animdur = route.query.animdur
     const location = { path: route.path, query, hash: route.hash }
     const url = router.resolve(location).fullPath
     if (url !== route.fullPath) {
@@ -526,10 +510,7 @@ function onEnded(): void {
       id="cover"
       class="player-cover"
       :class="{ 'info-minimized': trackInfoMinimized, 'slide-track-info': slideTrackInfo }"
-      :style="{
-        '--track-info-fade-delay': `${trackInfoFadeDelay}ms`,
-        '--track-info-animation-duration': `${trackInfoAnimationDuration}s`,
-      }"
+      :style="{ '--track-info-fade-delay': `${trackInfoFadeDelay}ms` }"
       @focusin="updateTrackInfoFocus"
       @focusout="updateTrackInfoFocus"
     >
@@ -547,7 +528,6 @@ function onEnded(): void {
       <div
         id="coverTrackInfo"
         class="cover-info"
-        :class="{ 'motion-enabled': trackInfoMotion }"
         :inert="trackInfoMinimized"
         @mouseenter="trackInfoHovered = true"
         @mouseleave="trackInfoHovered = false"
@@ -556,104 +536,84 @@ function onEnded(): void {
           <tr>
             <th>Title:</th>
             <td>
-              <PanningText :paused="trackInfoMinimized" :enabled="trackInfoMotion">
-                <a id="linkTitle" href="#" @click.prevent="togglePlayback">{{ track.title }}</a>
-              </PanningText>
+              <a id="linkTitle" href="#" @click.prevent="togglePlayback">{{ track.title }}</a>
             </td>
           </tr>
           <tr>
             <th>Artist:</th>
             <td>
-              <PanningText :paused="trackInfoMinimized" :enabled="trackInfoMotion">
-                <router-link id="linkArtist" :to="trackLinks.artist" target="_blank" rel="noopener noreferrer">{{
-                  track.artist
-                }}</router-link>
-              </PanningText>
+              <router-link id="linkArtist" :to="trackLinks.artist" target="_blank" rel="noopener noreferrer">{{
+                track.artist
+              }}</router-link>
             </td>
           </tr>
           <tr>
             <th>Album Artist:</th>
             <td>
-              <PanningText :paused="trackInfoMinimized" :enabled="trackInfoMotion">
-                <router-link
-                  v-if="track.albumartist"
-                  id="linkAlbumArtist"
-                  :to="trackLinks.albumartist"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  >{{ track.albumartist }}</router-link
-                >
-              </PanningText>
+              <router-link
+                v-if="track.albumartist"
+                id="linkAlbumArtist"
+                :to="trackLinks.albumartist"
+                target="_blank"
+                rel="noopener noreferrer"
+                >{{ track.albumartist }}</router-link
+              >
             </td>
           </tr>
           <tr>
             <th>Album:</th>
             <td>
-              <PanningText :paused="trackInfoMinimized" :enabled="trackInfoMotion">
-                <router-link id="linkAlbum" :to="trackLinks.album" target="_blank" rel="noopener noreferrer">{{
-                  track.album
-                }}</router-link>
-              </PanningText>
+              <router-link id="linkAlbum" :to="trackLinks.album" target="_blank" rel="noopener noreferrer">{{
+                track.album
+              }}</router-link>
             </td>
           </tr>
           <tr>
             <th>Genre:</th>
             <td>
-              <PanningText :paused="trackInfoMinimized" :enabled="trackInfoMotion">
-                <router-link id="linkGenre" :to="trackLinks.genre" target="_blank" rel="noopener noreferrer">{{
-                  track.genre
-                }}</router-link>
-              </PanningText>
+              <router-link id="linkGenre" :to="trackLinks.genre" target="_blank" rel="noopener noreferrer">{{
+                track.genre
+              }}</router-link>
             </td>
           </tr>
           <tr>
             <th>Year:</th>
             <td>
-              <PanningText :paused="trackInfoMinimized" :enabled="trackInfoMotion">
-                <router-link id="linkYear" :to="trackLinks.year" target="_blank" rel="noopener noreferrer">{{
-                  track.year
-                }}</router-link>
-              </PanningText>
+              <router-link id="linkYear" :to="trackLinks.year" target="_blank" rel="noopener noreferrer">{{
+                track.year
+              }}</router-link>
             </td>
           </tr>
           <tr>
             <th>Country:</th>
             <td>
-              <PanningText :paused="trackInfoMinimized" :enabled="trackInfoMotion">
-                <router-link id="linkCountry" :to="trackLinks.country" target="_blank" rel="noopener noreferrer">{{
-                  track.countryCode
-                }}</router-link>
-              </PanningText>
+              <router-link id="linkCountry" :to="trackLinks.country" target="_blank" rel="noopener noreferrer">{{
+                track.countryCode
+              }}</router-link>
             </td>
           </tr>
           <tr>
             <th>Region:</th>
             <td>
-              <PanningText :paused="trackInfoMinimized" :enabled="trackInfoMotion">
-                <router-link id="linkRegion" :to="trackLinks.region" target="_blank" rel="noopener noreferrer">{{
-                  track.regionCode
-                }}</router-link>
-              </PanningText>
+              <router-link id="linkRegion" :to="trackLinks.region" target="_blank" rel="noopener noreferrer">{{
+                track.regionCode
+              }}</router-link>
             </td>
           </tr>
           <tr>
             <th>City:</th>
             <td>
-              <PanningText :paused="trackInfoMinimized" :enabled="trackInfoMotion">
-                <router-link id="linkCity" :to="trackLinks.city" target="_blank" rel="noopener noreferrer">{{
-                  track.city
-                }}</router-link>
-              </PanningText>
+              <router-link id="linkCity" :to="trackLinks.city" target="_blank" rel="noopener noreferrer">{{
+                track.city
+              }}</router-link>
             </td>
           </tr>
           <tr>
             <th>Language:</th>
             <td>
-              <PanningText :paused="trackInfoMinimized" :enabled="trackInfoMotion">
-                <router-link id="linkLanguage" :to="trackLinks.language" target="_blank" rel="noopener noreferrer">{{
-                  track.languageCode
-                }}</router-link>
-              </PanningText>
+              <router-link id="linkLanguage" :to="trackLinks.language" target="_blank" rel="noopener noreferrer">{{
+                track.languageCode
+              }}</router-link>
             </td>
           </tr>
         </table>
@@ -729,62 +689,84 @@ function onEnded(): void {
         />
         <div v-if="spotifyTrack.error" class="error" role="alert">{{ spotifyTrack.error }}</div>
       </template>
-      <div class="player-display-options">
-        <label class="track-info-motion-option">
-          <input v-model="trackInfoMotion" type="checkbox" />
-          Animate track info
-        </label>
-        <label class="track-info-auto-hide-option">
-          <input v-model="trackInfoAutoHide" type="checkbox" />
-          Auto-hide track info
-        </label>
-        <label v-if="karaokeAvailable" class="karaoke-option">
+      <div v-if="karaokeAvailable" class="player-display-options">
+        <label class="karaoke-option">
           <input v-model="karaokeMode" type="checkbox" :disabled="hintsMode && !hintsRevealed" />
           Karaoke Mode
         </label>
       </div>
-      <button
-        v-for="l in LYRICS_KINDS"
-        :key="l.kind"
-        :id="`${l.kind}LyricsBtn`"
-        class="button-link"
-        :class="{ active: shownFile === l.kind }"
-        :aria-pressed="shownFile === l.kind"
-        :disabled="fileDisabled(l.kind)"
-        :title="fileTitle(l.kind, l.label)"
-        @click="toggleFile(l.kind)"
+      <div>
+        <button
+          type="button"
+          class="button-link player-settings-button"
+          aria-label="Player settings"
+          aria-haspopup="dialog"
+          aria-controls="playerSettingsDialog"
+          title="Player settings"
+          @click="playerSettingsDialog?.showModal()"
+        >
+          <i class="bi bi-gear-fill" aria-hidden="true"></i>
+        </button>
+        <button
+          id="trackSourcesBtn"
+          class="button-link"
+          :class="{ active: sourcesVisible }"
+          :aria-pressed="sourcesVisible"
+          :aria-expanded="sourcesVisible"
+          aria-controls="trackSources"
+          :disabled="!track || (hintsMode && !hintsRevealed)"
+          title="Show/hide Track Sources"
+          @click="sourcesVisible = !sourcesVisible"
+        >
+          <i class="bi bi-list-ul" aria-hidden="true"></i> Track Sources
+        </button>
+        <button
+          v-for="l in LYRICS_KINDS"
+          :key="l.kind"
+          :id="`${l.kind}LyricsBtn`"
+          class="button-link"
+          :class="{ active: shownFile === l.kind }"
+          :aria-pressed="shownFile === l.kind"
+          :disabled="fileDisabled(l.kind)"
+          :title="fileTitle(l.kind, l.label)"
+          @click="toggleFile(l.kind)"
+        >
+          <i class="bi bi-badge-cc"></i> {{ l.label }}
+        </button>
+      </div>
+      <div>
+        <button
+          v-for="y in YAML_KINDS"
+          :key="y.kind"
+          :id="`${y.kind}YamlBtn`"
+          class="button-link"
+          :class="{ active: shownFile === y.kind }"
+          :aria-pressed="shownFile === y.kind"
+          :aria-controls="`${y.kind}Yaml`"
+          :disabled="fileDisabled(y.kind)"
+          :title="fileTitle(y.kind, y.label)"
+          @click="toggleFile(y.kind)"
+        >
+          <i class="bi bi-file-earmark-text"></i> {{ y.label }}
+        </button>
+      </div>
+      <dialog
+        ref="playerSettingsDialog"
+        id="playerSettingsDialog"
+        aria-labelledby="playerSettingsTitle"
+        @keydown.esc.prevent="playerSettingsDialog?.close()"
       >
-        <i class="bi bi-music-note-list"></i> <i class="bi bi-badge-cc"></i> {{ l.label }}
-      </button>
-      <br />
-      <button
-        id="trackSourcesBtn"
-        class="button-link"
-        :class="{ active: sourcesVisible }"
-        :aria-pressed="sourcesVisible"
-        :aria-expanded="sourcesVisible"
-        aria-controls="trackSources"
-        :disabled="!track || (hintsMode && !hintsRevealed)"
-        title="Show/hide Track Sources"
-        @click="sourcesVisible = !sourcesVisible"
-      >
-        <i class="bi bi-list-ul" aria-hidden="true"></i> Track Sources
-      </button>
-      <button
-        v-for="y in YAML_KINDS"
-        :key="y.kind"
-        :id="`${y.kind}YamlBtn`"
-        class="button-link"
-        :class="{ active: shownFile === y.kind }"
-        :aria-pressed="shownFile === y.kind"
-        :aria-controls="`${y.kind}Yaml`"
-        :disabled="fileDisabled(y.kind)"
-        :title="fileTitle(y.kind, y.label)"
-        @click="toggleFile(y.kind)"
-      >
-        <i class="bi bi-file-earmark-text"></i> {{ y.label }}
-      </button>
-      <br />
+        <h2 id="playerSettingsTitle">Player settings</h2>
+        <form method="dialog">
+          <label>
+            <input v-model="trackInfoAutoHide" type="checkbox" autofocus />
+            Auto-hide track info
+          </label>
+          <div class="player-settings-actions">
+            <button type="submit" class="button-link">Done</button>
+          </div>
+        </form>
+      </dialog>
       <HintsPanel
         v-if="localEnabled && hintsMode"
         :track="track"
@@ -793,7 +775,6 @@ function onEnded(): void {
     </div>
     <div v-if="error" class="error">{{ error }}</div>
     <div v-if="trackInfoFadeDelayError" class="error" role="alert">{{ trackInfoFadeDelayError }}</div>
-    <div v-if="trackInfoAnimationDurationError" class="error" role="alert">{{ trackInfoAnimationDurationError }}</div>
     <div v-for="(message, kind) in lyricsErrors" :key="kind" class="error" role="alert">{{ message }}</div>
     <div
       v-if="shownFile && !fileDisabled(shownFile)"
@@ -811,22 +792,24 @@ function onEnded(): void {
           <table class="track-sources bordered-table" aria-label="Track media files and streaming items">
             <thead>
               <tr>
-                <th scope="col">Type</th>
-                <th scope="col">Details</th>
+                <th scope="col">Track Sources</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="(row, index) in sourceRows" :key="`${row.kind}-${index}`">
-                <th scope="row">
-                  {{ row.kind }}
-                  <div v-if="row.kind === 'mediafile' && !localEnabled" class="source-unavailable">
-                    <strong>Local playback disabled</strong>
-                    <span>Listed for reference only; media files are not served in this mode.</span>
-                  </div>
-                </th>
                 <td>
                   <table class="source-properties" :aria-label="`${row.kind} ${index + 1} properties`">
                     <tbody>
+                      <tr>
+                        <th scope="row">Type:</th>
+                        <td>
+                          {{ row.kind }}
+                          <div v-if="row.kind === 'mediafile' && !localEnabled" class="source-unavailable">
+                            <strong>Local playback disabled</strong>
+                            <span>Listed for reference only; media files are not served in this mode.</span>
+                          </div>
+                        </td>
+                      </tr>
                       <tr v-for="(value, key) in row.item" :key="key">
                         <th scope="row">{{ key }}:</th>
                         <td>
@@ -880,11 +863,6 @@ function onEnded(): void {
   overflow-wrap: anywhere;
   text-align: left;
   vertical-align: top;
-}
-
-.track-sources > thead > tr > th:first-child,
-.track-sources > tbody > tr > th {
-  width: 24%;
 }
 
 .source-properties th {
@@ -955,7 +933,8 @@ function onEnded(): void {
   position: absolute;
   z-index: 2;
   bottom: 0;
-  left: 0;
+  inset-inline: 0;
+  margin-inline: auto;
   width: min(85%, 30em);
   max-height: 100%;
   overflow: auto;
@@ -964,12 +943,7 @@ function onEnded(): void {
   transition: transform 600ms ease, opacity 600ms ease, visibility 600ms;
 }
 
-.cover-info.motion-enabled {
-  animation: track-info-perimeter var(--track-info-animation-duration, 30s) linear infinite;
-}
-
 .info-minimized .cover-info {
-  animation-play-state: paused;
   transform: translateY(42px) scaleY(0);
   opacity: 0;
   visibility: hidden;
@@ -999,33 +973,6 @@ function onEnded(): void {
 
 .cover-info .track-info th {
   width: 7em;
-}
-
-.cover-info:focus-within {
-  animation-play-state: paused;
-}
-
-@keyframes track-info-perimeter {
-  0%, 100% {
-    left: 0;
-    bottom: 0;
-    translate: 0 0;
-  }
-  25% {
-    left: 100%;
-    bottom: 0;
-    translate: -100% 0;
-  }
-  50% {
-    left: 100%;
-    bottom: 100%;
-    translate: -100% 100%;
-  }
-  75% {
-    left: 0;
-    bottom: 100%;
-    translate: 0 100%;
-  }
 }
 
 .cover-info .track-info th,
@@ -1063,12 +1010,47 @@ function onEnded(): void {
   margin-block: 8px;
 }
 
+.player-settings-button {
+  padding-inline: 12px;
+}
+
+#playerSettingsDialog {
+  box-sizing: border-box;
+  width: min(90%, 400px);
+  padding: 24px;
+  border: 0;
+  border-radius: 12px;
+  background-color: #333;
+  color: white;
+  text-align: center;
+}
+
+#playerSettingsDialog::backdrop {
+  background-color: rgba(0, 0, 0, 0.9);
+}
+
+#playerSettingsTitle {
+  margin-top: 0;
+}
+
+.player-settings-actions {
+  margin-top: 16px;
+}
+
+.player-settings-actions .button-link {
+  background-color: #555;
+}
+
+.player-settings-actions .button-link:hover {
+  background-color: #7b3f3f;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .cover-info:not(.motion-enabled) {
+  .cover-info {
     transition: opacity 600ms ease, visibility 600ms;
   }
 
-  .info-minimized .cover-info:not(.motion-enabled) {
+  .info-minimized .cover-info {
     transform: none;
   }
 }

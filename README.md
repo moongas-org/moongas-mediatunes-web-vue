@@ -70,24 +70,18 @@ deno task check     # runs vue-tsc on client/ and deno check on server/
 deno task test      # player selection regression tests (Node.js 24+)
 ```
 
-Visible track information slowly pans between the cover's left and right edges,
-taking 24 seconds in each direction. Long field values independently scroll
-back and forth within their cells, while short values stay still. Both motions
-pause when the information is minimized. Keyboard focus pauses the block and
-wraps the focused field so links remain usable. The **Animate track info**
-checkbox, grouped with **Karaoke Mode**, enables or disables both animations.
-It is checked by default, including when reduced motion is requested;
-uncheck it to stop panning and wrap long values.
-The selection remains in effect across tracks while the player is open.
-Existing auto-hide, reveal and
-optional slide/fade behavior is preserved.
+Track information is centered horizontally at the bottom of the album cover.
+The gear button immediately to the left of **Track Sources** opens **Player
+settings**, where **Auto-hide track info** can be turned on or off. It is off
+by default. Reveal and optional slide/fade behavior are unchanged.
 
 The player and Name That Tune select metadata via `/api/random-track`, then
 look up the selected track's ID in `/api/tracks` and request
 `/api/mediafiles?trackid=<id>` and `/api/trackstreaming?trackid=<id>`.
-A table below the player buttons and above the track links lists all media-file
-items first, followed by all track-streaming items. Each row has a source type
-and a nested two-column table of all returned property keys and values.
+The single-column **Track Sources** table below the player buttons and above
+the track links lists media-file items first, followed by track-streaming items.
+Each source has a nested two-column table with **Type** in the first row,
+followed by all returned property keys and values.
 Streaming items' `streaming_track_url` values are hyperlinks that open in a
 new tab, with the same link colors and hover effect as the track info table.
 Long keys and values wrap to fit the available horizontal space.
@@ -95,8 +89,9 @@ When local playback is disabled, media-file rows remain visible with a
 **Local playback disabled** notice explaining that they are listed for reference
 only and media files are not served in this mode. Streaming rows are unchanged.
 The entire Track Sources section is hidden by default. The **Track Sources**
-button immediately to the left of **Track YAML** toggles its visibility,
-including source-loading status and errors. Selecting another track hides it
+button, to the left of **Lyrics** and **LRC**, toggles its visibility, including
+source-loading status and errors. The YAML buttons are on a separate row below.
+Selecting another track hides it
 again. Name That Tune disables the toggle until details are revealed; revealing
 details does not automatically open the section. Source lookups still run while
 the section is hidden so playback remains available. Lookup
@@ -295,6 +290,9 @@ Examples:
 ### Filter by artist, album and title
 
 [moongas.org/mediatunes/player?artist=Rush&album=Grace%20Under%20Pressure&title=The%20Body%20Electric](https://moongas.org/mediatunes/player?artist=Rush&album=Grace%20Under%20Pressure&title=The%20Body%20Electric)
+
+On views with filters, the **Add filter** control is next to the view selector
+in the header ribbon. Filter chips still appear in the page content.
 
 On the Tracks view, the `title` query parameter is available as the `title`
 filter.

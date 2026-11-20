@@ -173,19 +173,21 @@ function optionsWith(field: FilterField, value: string): FilterOption[] {
       </button>
     </span>
 
-    <span v-if="addable.length" class="query-filter-add-control">
-      <i class="bi bi-funnel" aria-hidden="true"></i>
-      <select
-        v-model="addKey"
-        class="query-filter-add"
-        aria-label="Add filter"
-        title="Add filter"
-        @change="addPending"
-      >
-        <option value="" disabled>Add filter</option>
-        <option v-for="f in addable" :key="f.key" :value="f.key">{{ f.label }}</option>
-      </select>
-    </span>
+    <Teleport to="#header-filter-controls">
+      <span v-if="addable.length" class="query-filter-add-control">
+        <i class="bi bi-funnel" aria-hidden="true"></i>
+        <select
+          v-model="addKey"
+          class="query-filter-add"
+          aria-label="Add filter"
+          title="Add filter"
+          @change="addPending"
+        >
+          <option value="" disabled>Add filter</option>
+          <option v-for="f in addable" :key="f.key" :value="f.key">{{ f.label }}</option>
+        </select>
+      </span>
+    </Teleport>
   </div>
 </template>
 
@@ -197,6 +199,10 @@ function optionsWith(field: FilterField, value: string): FilterOption[] {
   align-items: center;
   gap: 6px;
   margin: 8px 0;
+}
+
+.query-filters:empty {
+  display: none;
 }
 
 .query-filter {
@@ -224,8 +230,9 @@ function optionsWith(field: FilterField, value: string): FilterOption[] {
 
 .query-filter-add {
   appearance: none;
-  width: 2.5em;
-  height: 2.5em;
+  box-sizing: border-box;
+  inline-size: var(--header-control-height);
+  block-size: var(--header-control-height);
   color: transparent;
   cursor: pointer;
 }
