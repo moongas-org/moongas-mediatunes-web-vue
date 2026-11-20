@@ -74,6 +74,7 @@ const trackInfoMinimized = ref(false)
 const trackInfoAutoHide = ref(false)
 const playerSettingsDialog = ref<HTMLDialogElement | null>(null)
 const trackInfoPinned = ref(false)
+const trackInfoOnTop = ref(false)
 const trackInfoHovered = ref(false)
 const trackInfoBarHovered = ref(false)
 const trackInfoFocused = ref(false)
@@ -93,7 +94,10 @@ function updateTrackInfoFocus(event: FocusEvent): void {
 }
 
 function toggleTrackInfo(): void {
-  if (trackInfoMinimized.value) trackInfoPinned.value = true
+  if (trackInfoMinimized.value) {
+    trackInfoPinned.value = true
+    trackInfoOnTop.value = true
+  }
   trackInfoMinimized.value = !trackInfoMinimized.value
 }
 
@@ -579,6 +583,7 @@ function onEnded(): void {
       <div
         id="coverTrackInfo"
         class="cover-info"
+        :class="{ 'track-info-on-top': trackInfoOnTop }"
         :inert="trackInfoMinimized"
         @mouseenter="trackInfoHovered = true"
         @mouseleave="trackInfoHovered = false"
@@ -754,7 +759,12 @@ function onEnded(): void {
       </table>
       <div v-if="karaokeAvailable" class="player-display-options">
         <label class="karaoke-option">
-          <input v-model="karaokeMode" type="checkbox" :disabled="hintsMode && !hintsRevealed" />
+          <input
+            v-model="karaokeMode"
+            type="checkbox"
+            :disabled="hintsMode && !hintsRevealed"
+            @change="karaokeMode && (trackInfoOnTop = false)"
+          />
           Karaoke Mode
         </label>
       </div>
@@ -1035,6 +1045,10 @@ function onEnded(): void {
   font-size: clamp(12px, 3.9cqi, 1em);
   transform-origin: bottom left;
   transition: transform 600ms ease, opacity 600ms ease, visibility 600ms;
+}
+
+.cover-info.track-info-on-top {
+  z-index: 4;
 }
 
 .info-minimized .cover-info {

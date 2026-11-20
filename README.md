@@ -113,7 +113,9 @@ shows **No track sources available.**
 When the selected media file has usable timestamped `.lrc` lyrics, a
 **Karaoke Mode** checkbox appears in the player. Enable it and start local or
 Spotify playback to show synchronized lyrics above the album cover and any
-expanded track information. The active line is highlighted with up to two
+expanded track information. If track information is hidden and then reopened,
+it appears above the lyrics; turning Karaoke Mode off and back on brings the
+lyrics to the front again. The active line is highlighted with up to two
 preceding and two following lines. Seeking updates the lyrics, and pausing
 keeps the overlay visible at the paused position.
 
