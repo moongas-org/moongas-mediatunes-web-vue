@@ -106,7 +106,7 @@ function yearQuery(y: number): LocationQueryRaw {
 .view-navigation {
   display: inline-flex;
   align-items: center;
-  gap: 0.5em;
+  gap: 0.25em;
   padding: 4px;
 }
 
