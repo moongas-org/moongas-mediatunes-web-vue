@@ -326,6 +326,8 @@ defineExpose({ pause })
 
 <style scoped>
 .spotify-player {
+  width: 100%;
+  min-width: 0;
   max-width: 822px;
   margin: 12px auto;
   padding: 16px;

@@ -693,52 +693,65 @@ function onEnded(): void {
     </div>
     <div id="playerControls">
       <h1 v-if="hintsMode">Random track, can you name it?</h1>
-      <button id="previousBtn" class="button-link" aria-label="Previous" title="Previous" :disabled="!canGoBack" @click="previous">
-        <i class="bi bi-rewind-circle-fill" aria-hidden="true"></i>
-      </button>
-      <template v-if="localPlayerVisible">
-        <button
-          id="playBtn"
-          class="button-link"
-          :aria-label="playerRef?.isPlaying ? 'Pause' : 'Play'"
-          :title="playerRef?.isPlaying ? 'Pause' : 'Play'"
-          :disabled="!audioSrc || !playerRef || playerRef.loading"
-          @click="togglePlayback"
-        >
-          <i
-            :class="playerRef?.isPlaying ? 'bi bi-pause-circle-fill' : 'bi bi-play-circle-fill'"
-            aria-hidden="true"
-          ></i>
-        </button>
-      </template>
-      <button id="nextBtn" class="button-link" aria-label="Next" title="Next" @click="next">
-        <i class="bi bi-fast-forward-circle-fill" aria-hidden="true"></i>
-      </button>
-      <HowlerPlayer
-        v-if="localPlayerVisible"
-        ref="playerRef"
-        :src="audioSrc"
-        :autoplay="autoplayPending"
-        :title="!hintsMode || hintsRevealed ? track?.title : undefined"
-        :artist="!hintsMode || hintsRevealed ? track?.artist : undefined"
-        :album="!hintsMode || hintsRevealed ? track?.album : undefined"
-        @ended="onEnded"
-        @next="next"
-        @previous="previous"
-        @playing="onLocalPlaying"
-        @progress="updateKaraokePosition('local', $event)"
-      />
-      <div v-show="spotifyVisible && spotifyTrack.trackId">
-        <SpotifyPlayer
-          v-if="spotifyInitialized"
-          ref="spotifyRef"
-          :track-id="spotifyTrack.trackId ?? undefined"
-          @playing="playerRef?.pause()"
-          @started="startKaraoke('spotify')"
-          @progress="updateKaraokePosition('spotify', $event)"
-        />
-      </div>
-      <div v-if="spotifyVisible && spotifyTrack.error" class="error" role="alert">{{ spotifyTrack.error }}</div>
+      <table class="player-layout" role="presentation">
+        <tbody>
+          <tr>
+            <td class="player-navigation">
+              <button id="previousBtn" class="button-link" aria-label="Previous" title="Previous" :disabled="!canGoBack" @click="previous">
+                <i class="bi bi-rewind-circle-fill" aria-hidden="true"></i>
+              </button>
+            </td>
+            <td class="player-playback">
+              <div class="player-panels">
+                <HowlerPlayer
+                  v-if="localPlayerVisible"
+                  ref="playerRef"
+                  :src="audioSrc"
+                  :autoplay="autoplayPending"
+                  :title="!hintsMode || hintsRevealed ? track?.title : undefined"
+                  :artist="!hintsMode || hintsRevealed ? track?.artist : undefined"
+                  :album="!hintsMode || hintsRevealed ? track?.album : undefined"
+                  @ended="onEnded"
+                  @next="next"
+                  @previous="previous"
+                  @playing="onLocalPlaying"
+                  @progress="updateKaraokePosition('local', $event)"
+                >
+                  <button
+                    id="playBtn"
+                    class="button-link"
+                    :aria-label="playerRef?.isPlaying ? 'Pause' : 'Play'"
+                    :title="playerRef?.isPlaying ? 'Pause' : 'Play'"
+                    :disabled="!audioSrc || !playerRef || playerRef.loading"
+                    @click="togglePlayback"
+                  >
+                    <i
+                      :class="playerRef?.isPlaying ? 'bi bi-pause-circle-fill' : 'bi bi-play-circle-fill'"
+                      aria-hidden="true"
+                    ></i>
+                  </button>
+                </HowlerPlayer>
+                <div v-show="spotifyVisible && spotifyTrack.trackId" class="spotify-panel">
+                  <SpotifyPlayer
+                    v-if="spotifyInitialized"
+                    ref="spotifyRef"
+                    :track-id="spotifyTrack.trackId ?? undefined"
+                    @playing="playerRef?.pause()"
+                    @started="startKaraoke('spotify')"
+                    @progress="updateKaraokePosition('spotify', $event)"
+                  />
+                </div>
+              </div>
+              <div v-if="spotifyVisible && spotifyTrack.error" class="error" role="alert">{{ spotifyTrack.error }}</div>
+            </td>
+            <td class="player-navigation">
+              <button id="nextBtn" class="button-link" aria-label="Next" title="Next" @click="next">
+                <i class="bi bi-fast-forward-circle-fill" aria-hidden="true"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
       <div v-if="karaokeAvailable" class="player-display-options">
         <label class="karaoke-option">
           <input v-model="karaokeMode" type="checkbox" :disabled="hintsMode && !hintsRevealed" />
@@ -940,6 +953,47 @@ function onEnded(): void {
 
 #playBtn .bi {
   font-size: 2em;
+}
+
+.player-layout {
+  border: 0;
+  table-layout: fixed;
+}
+
+.player-layout td {
+  border: 0;
+  vertical-align: middle;
+}
+
+.player-navigation {
+  width: calc(1em + 68px);
+  white-space: nowrap;
+}
+
+.player-navigation .button-link {
+  box-sizing: border-box;
+  width: calc(1em + 56px);
+}
+
+.player-playback {
+  width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.player-panels {
+  display: grid;
+  grid-auto-rows: 1fr;
+}
+
+.spotify-panel {
+  display: flex;
+  min-width: 0;
+}
+
+.player-playback #playBtn {
+  box-sizing: border-box;
+  max-width: calc(100% - 4px);
+  padding-inline: min(28px, 10%);
 }
 
 .yaml {

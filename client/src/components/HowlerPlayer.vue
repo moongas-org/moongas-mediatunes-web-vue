@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { Howl } from 'howler'
+import mp3LogoUrl from '../assets/svg/mp3_logo.svg'
 
 const props = defineProps<{
   src?: string
@@ -230,8 +231,12 @@ defineExpose({ togglePlayback, restart, pause, isPlaying, loading })
 </script>
 
 <template>
-  <div class="howler-player" role="group" aria-label="Audio player">
+  <div class="howler-player" role="group" aria-label="Local Media player">
+    <div class="local-media-heading">
+      <img :src="mp3LogoUrl" alt="" /> Local Media
+    </div>
     <div class="playback-row">
+      <slot />
       <span class="playback-time">{{ formatTime(position) }}</span>
       <input
         class="playback-progress"
@@ -258,28 +263,46 @@ defineExpose({ togglePlayback, restart, pause, isPlaying, loading })
 
 <style scoped>
 .howler-player {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
   max-width: 822px;
   margin: 12px auto;
-  padding: 8px;
+  padding: 16px;
   box-sizing: border-box;
   border-radius: 8px;
   background: #333;
+  font-size: 0.65em;
 }
 
 .playback-row {
   display: flex;
   align-items: center;
+  justify-content: center;
   flex-wrap: wrap;
   gap: 8px;
 }
 
+.local-media-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.local-media-heading img {
+  width: 24px;
+  height: 24px;
+}
+
 .playback-progress {
   flex: 1;
-  min-width: 80px;
+  min-width: min(80px, 100%);
 }
 
 .playback-time {
-  font-size: 0.6em;
   font-variant-numeric: tabular-nums;
 }
 
@@ -287,11 +310,13 @@ defineExpose({ togglePlayback, restart, pause, isPlaying, loading })
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.7em;
+  max-width: 100%;
 }
 
 .volume-control input {
   width: 70px;
+  min-width: 0;
+  max-width: calc(100% - 1.5em);
 }
 
 input[type='range'] {
