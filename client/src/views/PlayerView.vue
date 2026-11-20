@@ -962,6 +962,8 @@ function onEnded(): void {
 }
 
 .player-layout {
+  max-width: 822px;
+  margin-inline: auto;
   border: 0;
   table-layout: fixed;
 }

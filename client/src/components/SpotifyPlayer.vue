@@ -300,22 +300,25 @@ defineExpose({ pause })
 </script>
 
 <template>
-  <section class="spotify-player" aria-label="Spotify player">
-    <a class="spotify-track" :href="`https://open.spotify.com/track/${trackId}`" target="_blank" rel="noopener noreferrer">
-      <img :src="spotifyLogoUrl" alt="" /> Spotify
-    </a>
+  <section class="spotify-player player-panel" aria-label="Spotify player">
+    <div class="player-panel-header">
+      <a class="player-panel-brand" :href="`https://open.spotify.com/track/${trackId}`" target="_blank" rel="noopener noreferrer">
+        <img :src="spotifyLogoUrl" alt="" /> <span>Spotify</span>
+      </a>
+      <button
+        v-if="!checking && authenticated"
+        class="button-link playback-toggle"
+        :disabled="busy"
+        :aria-label="isPlaying ? 'Pause Spotify' : 'Play Spotify'"
+        :title="isPlaying ? 'Pause Spotify' : 'Play Spotify'"
+        @click="togglePlayback"
+      >
+        <i :class="isPlaying ? 'bi bi-pause-circle-fill' : 'bi bi-play-circle-fill'" aria-hidden="true"></i>
+      </button>
+    </div>
     <p v-if="checking" role="status">Checking Spotify connection...</p>
     <template v-else-if="authenticated">
       <div class="spotify-controls">
-        <button
-          class="button-link playback-toggle"
-          :disabled="busy"
-          :aria-label="isPlaying ? 'Pause Spotify' : 'Play Spotify'"
-          :title="isPlaying ? 'Pause Spotify' : 'Play Spotify'"
-          @click="togglePlayback"
-        >
-          <i :class="isPlaying ? 'bi bi-pause-circle-fill' : 'bi bi-play-circle-fill'" aria-hidden="true"></i>
-        </button>
         <span class="spotify-time">{{ formatTime(position) }}</span>
         <input class="spotify-progress" type="range" aria-label="Spotify playback position" min="0" :max="duration" :value="position" :disabled="!duration || busy" @change="seek" />
         <span class="spotify-time">{{ formatTime(duration) }}</span>
@@ -347,18 +350,12 @@ defineExpose({ pause })
   font-size: 0.65em;
 }
 
-.spotify-track,
 .spotify-controls,
 .spotify-controls label {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-}
-
-.spotify-track img {
-  width: 24px;
-  height: 24px;
 }
 
 .spotify-controls {

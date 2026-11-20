@@ -231,12 +231,14 @@ defineExpose({ togglePlayback, restart, pause, isPlaying, loading })
 </script>
 
 <template>
-  <div class="howler-player" role="group" aria-label="Local Media player">
-    <div class="local-media-heading">
-      <img :src="mp3LogoUrl" alt="" /> Local Media
+  <div class="howler-player player-panel" role="group" aria-label="Local Media player">
+    <div class="player-panel-header">
+      <div class="player-panel-brand">
+        <img :src="mp3LogoUrl" alt="" /> <span>Local Media</span>
+      </div>
+      <slot />
     </div>
     <div class="playback-row">
-      <slot />
       <span class="playback-time">{{ formatTime(position) }}</span>
       <input
         class="playback-progress"
@@ -283,18 +285,6 @@ defineExpose({ togglePlayback, restart, pause, isPlaying, loading })
   justify-content: flex-start;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-.local-media-heading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.local-media-heading img {
-  width: 24px;
-  height: 24px;
 }
 
 .playback-progress {
