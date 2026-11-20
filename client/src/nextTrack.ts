@@ -1,5 +1,5 @@
 import type { LocationQuery } from 'vue-router'
-import type { MediaFile, TrackInfo } from './types'
+import type { MediaFile, TrackInfo, TrackMediaFile, TrackStreaming } from './types'
 
 const MAX_UNFILTERED_ATTEMPTS = 10
 
@@ -28,6 +28,14 @@ export function firstMediaPath(mediafiles: readonly Pick<MediaFile, 'path'>[]): 
   return mediafiles[0]?.path || null
 }
 
+export function hasAvailablePlaybackSource(
+  mediafiles: readonly TrackMediaFile[],
+  trackStreaming: readonly TrackStreaming[],
+  localPlaybackEnabled: boolean,
+): boolean {
+  return trackStreaming.length > 0 || (localPlaybackEnabled && mediafiles.length > 0)
+}
+
 /** Resolves the selected track's YAML path to its first media file, if available. */
 export async function loadTrackMediaPath(
   track: TrackInfo,
@@ -48,6 +56,7 @@ export async function loadNextTrack(
   currentPath: string | undefined,
   randomTrack: (query: LocationQuery) => Promise<TrackInfo>,
   isCurrent: () => boolean,
+  isEligible?: (track: TrackInfo, isCurrent: () => boolean) => Promise<boolean>,
 ): Promise<TrackSelection | null> {
   const filters: LocationQuery = { ...query }
   delete filters.hints
@@ -70,14 +79,18 @@ export async function loadNextTrack(
     if (Object.keys(filters).length === 0) unfilteredAttempts++
     const next = await randomTrack({ ...filters })
     if (!isCurrent()) return null
-    if (next.path !== currentPath) return { track: next, query: filters }
+    if (next.path !== currentPath) {
+      const eligible = !isEligible || await isEligible(next, isCurrent)
+      if (!isCurrent()) return null
+      if (eligible) return { track: next, query: filters }
+    }
 
     const key = keys.shift()
     if (key !== undefined) {
       delete filters[key]
     } else if (unfilteredAttempts >= MAX_UNFILTERED_ATTEMPTS) {
       throw new Error(
-        `No different track found after ${MAX_UNFILTERED_ATTEMPTS} unfiltered attempts. Try Next again.`,
+        `No different${isEligible ? ' track with media or streaming sources' : ' track'} found after ${MAX_UNFILTERED_ATTEMPTS} unfiltered attempts. Try Next again.`,
       )
     }
   }

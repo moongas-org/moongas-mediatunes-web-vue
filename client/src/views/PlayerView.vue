@@ -15,7 +15,12 @@ import QueryFilters from '../components/QueryFilters.vue'
 import { useGeoFilterFields } from '../data/geoFilters'
 import WebSearchLinks from '../components/WebSearchLinks.vue'
 import mp3LogoUrl from '../assets/svg/mp3_logo.svg'
-import { firstMediaPath, loadNextTrack, loadTrackId } from '../nextTrack'
+import {
+  firstMediaPath,
+  hasAvailablePlaybackSource,
+  loadNextTrack,
+  loadTrackId,
+} from '../nextTrack'
 import {
   canGoBack,
   currentHistoryTrack,
@@ -133,6 +138,13 @@ watch(karaokeAvailable, (available) => {
 
 const localEnabled = computed(() => configState.config?.playbackMethodLocalEnabled ?? false)
 const hintsMode = computed(() => props.hints || route.query.hints === '1')
+const localPlayerVisible = computed(() =>
+  localEnabled.value && (!hintsMode.value || sourcesLoading.value || Boolean(mediaPath.value)),
+)
+const spotifyVisible = computed(() =>
+  !hintsMode.value || hintsRevealed.value
+  || (!localEnabled.value || (!sourcesLoading.value && !mediaPath.value)),
+)
 const slideTrackInfo = computed(() => route.query.slideTrackInfo === '1')
 const trackInfoFadeDelayError = computed(() => {
   const value = route.query.trackInfoFadeDelay
@@ -221,6 +233,24 @@ function showTrack(next: TrackInfo, autoplay: boolean): void {
   if (autoplay && samePath) restart()
 }
 
+async function hasPlaybackSource(
+  candidate: TrackInfo,
+  isCurrent: () => boolean,
+): Promise<boolean> {
+  const trackId = await loadTrackId(candidate, api.tracks, isCurrent)
+  if (trackId === null || !isCurrent()) return false
+  const query = { trackid: String(trackId) }
+  const [media, streaming] = await Promise.all([
+    localEnabled.value ? api.mediafiles(query) : Promise.resolve({ mediafiles: [] }),
+    api.trackstreaming(query),
+  ])
+  return isCurrent() && hasAvailablePlaybackSource(
+    media.mediafiles,
+    streaming.trackstreaming,
+    localEnabled.value,
+  )
+}
+
 async function loadRandomTrack(autoplay: boolean): Promise<void> {
   const requestId = ++trackRequestId
   error.value = null
@@ -230,6 +260,7 @@ async function loadRandomTrack(autoplay: boolean): Promise<void> {
       track.value?.path,
       api.randomTrack,
       () => requestId === trackRequestId,
+      hintsMode.value ? hasPlaybackSource : undefined,
     )
     if (!selection || requestId !== trackRequestId) return
     const { track: next, query } = selection
@@ -255,14 +286,29 @@ async function loadRandomTrack(autoplay: boolean): Promise<void> {
   }
 }
 
-/** Shows the previous/next track from the play history; false if there is none. */
-function showHistoryTrack(step: -1 | 1, autoplay: boolean): boolean {
-  let next = moveHistory(step)
-  while (next && next.path === track.value?.path) next = moveHistory(step)
-  if (!next) return false
-  trackRequestId++
-  showTrack(next, autoplay)
-  return true
+/** Shows the previous/next eligible track from the play history. */
+async function showHistoryTrack(step: -1 | 1, autoplay: boolean): Promise<boolean> {
+  const requestId = ++trackRequestId
+  const isCurrent = () => requestId === trackRequestId
+  error.value = null
+  try {
+    let next = moveHistory(step)
+    while (next && isCurrent()) {
+      if (next.path !== track.value?.path
+        && (!hintsMode.value || await hasPlaybackSource(next, isCurrent))) {
+        if (!isCurrent()) return true
+        showTrack(next, autoplay)
+        return true
+      }
+      next = moveHistory(step)
+    }
+    return !isCurrent()
+  } catch (e) {
+    if (isCurrent()) {
+      error.value = `Failed to load track sources. ${e instanceof Error ? e.message : String(e)}`
+    }
+    return true
+  }
 }
 
 /**
@@ -482,21 +528,21 @@ function restart(): void {
 }
 
 function next(): void {
-  goForward(localEnabled.value)
+  void goForward(localEnabled.value)
 }
 
-function previous(): void {
-  showHistoryTrack(-1, localEnabled.value)
+async function previous(): Promise<void> {
+  await showHistoryTrack(-1, localEnabled.value)
 }
 
 /** Replays the next track in the history if there is one, else loads a new random track. */
-function goForward(autoplay: boolean): void {
-  if (!showHistoryTrack(1, autoplay)) void loadRandomTrack(autoplay)
+async function goForward(autoplay: boolean): Promise<void> {
+  if (!await showHistoryTrack(1, autoplay)) await loadRandomTrack(autoplay)
 }
 
 /** Continuous shuffle: when a track ends, advance to the next one and play it. */
 function onEnded(): void {
-  goForward(true)
+  void goForward(true)
 }
 
 </script>
@@ -641,11 +687,11 @@ function onEnded(): void {
       />
     </div>
     <div id="playerControls">
-      <h1 v-if="localEnabled && hintsMode">Random track, can you name it?</h1>
+      <h1 v-if="hintsMode">Random track, can you name it?</h1>
       <button id="previousBtn" class="button-link" aria-label="Previous" title="Previous" :disabled="!canGoBack" @click="previous">
         <i class="bi bi-rewind-circle-fill" aria-hidden="true"></i>
       </button>
-      <template v-if="localEnabled">
+      <template v-if="localPlayerVisible">
         <button
           id="playBtn"
           class="button-link"
@@ -664,7 +710,7 @@ function onEnded(): void {
         <i class="bi bi-fast-forward-circle-fill" aria-hidden="true"></i>
       </button>
       <HowlerPlayer
-        v-if="localEnabled"
+        v-if="localPlayerVisible"
         ref="playerRef"
         :src="audioSrc"
         :autoplay="autoplayPending"
@@ -677,7 +723,7 @@ function onEnded(): void {
         @playing="onLocalPlaying"
         @progress="updateKaraokePosition('local', $event)"
       />
-      <template v-if="!hintsMode || hintsRevealed">
+      <template v-if="spotifyVisible">
         <SpotifyPlayer
           v-if="spotifyTrack.trackId"
           :key="spotifyTrack.trackId"
@@ -768,7 +814,7 @@ function onEnded(): void {
         </form>
       </dialog>
       <HintsPanel
-        v-if="localEnabled && hintsMode"
+        v-if="hintsMode"
         :track="track"
         @reveal="hintsRevealed = true"
       />

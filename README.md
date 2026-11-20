@@ -78,6 +78,9 @@ by default. Reveal and optional slide/fade behavior are unchanged.
 The player and Name That Tune select metadata via `/api/random-track`, then
 look up the selected track's ID in `/api/tracks` and request
 `/api/mediafiles?trackid=<id>` and `/api/trackstreaming?trackid=<id>`.
+Name That Tune skips candidates with neither media files nor streaming sources.
+When local playback is unavailable, an available Spotify player is shown before
+the answer is revealed.
 The single-column **Track Sources** table below the player buttons and above
 the track links lists media-file items first, followed by track-streaming items.
 Each source has a nested two-column table with **Type** in the first row,

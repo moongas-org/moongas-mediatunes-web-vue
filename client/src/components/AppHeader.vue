@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
-import { configState } from '../configStore'
 
 const route = useRoute()
 const router = useRouter()
@@ -9,8 +8,6 @@ const router = useRouter()
 interface NavLink {
   label: string
   path: string
-  /** Only shown when local playback is enabled. */
-  localOnly?: boolean
 }
 
 const links: NavLink[] = [
@@ -21,19 +18,12 @@ const links: NavLink[] = [
   {
     label: 'name that tune',
     path: '/name-that-tune',
-    localOnly: true,
   },
   { label: 'tracks', path: '/tracks' },
 ]
 
-const localEnabled = computed(() => configState.config?.playbackMethodLocalEnabled ?? false)
-
-const visibleLinks = computed(() =>
-  links.filter((l) => !l.localOnly || localEnabled.value),
-)
-
 const selectedView = computed(() =>
-  visibleLinks.value.some((link) => link.path === route.path) ? route.path : '',
+  links.some((link) => link.path === route.path) ? route.path : '',
 )
 
 function changeView(event: Event): void {
@@ -72,7 +62,7 @@ function yearQuery(y: number): LocationQueryRaw {
         </svg>
         <select :value="selectedView" aria-label="View" @change="changeView">
           <option value="" disabled>Select a view</option>
-          <option v-for="link in visibleLinks" :key="link.path" :value="link.path">
+          <option v-for="link in links" :key="link.path" :value="link.path">
             {{ link.label }}
           </option>
         </select>

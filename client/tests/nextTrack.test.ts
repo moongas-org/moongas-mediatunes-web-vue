@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { loadNextTrack, loadTrackId, loadTrackMediaPath } from '../src/nextTrack.ts'
+import {
+  hasAvailablePlaybackSource,
+  loadNextTrack,
+  loadTrackId,
+  loadTrackMediaPath,
+} from '../src/nextTrack.ts'
 import type { TrackInfo } from '../src/types.ts'
 
 const current: TrackInfo = {
@@ -10,6 +15,19 @@ const current: TrackInfo = {
 }
 const other: TrackInfo = { ...current, path: '/other.mp3', title: 'Other' }
 const active = () => true
+
+test('requires a streaming source when local playback is disabled', () => {
+  const mediafiles = [{ path: '/media/current.mp3' }]
+  assert.equal(hasAvailablePlaybackSource(mediafiles, [], false), false)
+  assert.equal(hasAvailablePlaybackSource([], [{ trackid: 42 }], false), true)
+  assert.equal(hasAvailablePlaybackSource(mediafiles, [{ trackid: 42 }], false), true)
+})
+
+test('accepts either local media or streaming when local playback is enabled', () => {
+  assert.equal(hasAvailablePlaybackSource([{ path: '/media/current.mp3' }], [], true), true)
+  assert.equal(hasAvailablePlaybackSource([], [{ trackid: 42 }], true), true)
+  assert.equal(hasAvailablePlaybackSource([], [], true), false)
+})
 
 test('resolves the exact track ID for media-file and streaming lookups', async () => {
   const id = await loadTrackId(current, async (query) => {
@@ -39,6 +57,43 @@ test('different track is accepted immediately with all filters intact', async ()
     return other
   }, active)
   assert.equal(result?.track, other)
+  assert.equal(calls, 1)
+})
+
+test('skips tracks without media or streaming sources in eligible selections', async () => {
+  const unavailable = { ...other, path: '/unavailable.yml', title: 'Unavailable' }
+  const requests: unknown[] = []
+  const checked: string[] = []
+  const result = await loadNextTrack(
+    { title: 'Current' },
+    current.path,
+    async (query) => {
+      requests.push(query)
+      return requests.length === 1 ? unavailable : other
+    },
+    active,
+    async (candidate) => {
+      checked.push(candidate.path)
+      return candidate.path === other.path
+    },
+  )
+  assert.equal(result?.track, other)
+  assert.deepEqual(result?.query, {})
+  assert.deepEqual(requests, [{ title: 'Current' }, {}])
+  assert.deepEqual(checked, [unavailable.path, other.path])
+})
+
+test('stale eligibility checks neither return a track nor continue relaxing filters', async () => {
+  let calls = 0
+  let isCurrent = true
+  const result = await loadNextTrack({ title: 'Current' }, current.path, async () => {
+    calls++
+    return other
+  }, () => isCurrent, async () => {
+    isCurrent = false
+    return true
+  })
+  assert.equal(result, null)
   assert.equal(calls, 1)
 })
 
