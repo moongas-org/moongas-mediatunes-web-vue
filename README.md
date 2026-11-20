@@ -268,8 +268,12 @@ both matching and non-matching results. Filtering is performed by the backend;
 track API results expose these boolean properties. Artist sorting and the main
 Shuffle links preserve the filters.
 
+The Albums view also offers **hascover** (has cover), with `true` and `false`
+choices, to filter by cover availability.
+
 Examples:
 
+- `/mediatunes/albums?hascover=true`
 - `/mediatunes/albums?hasspotify=true`
 - `/mediatunes/artists?hasspotify=false`
 - `/mediatunes/tracks?hasspotify=true`

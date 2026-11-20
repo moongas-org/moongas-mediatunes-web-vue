@@ -47,6 +47,7 @@ const filterFields: FilterField[] = [
   { key: 'album', label: 'album', multi: true },
   { key: 'genre', label: 'genre', multi: true, options: GENRES },
   { key: 'explicitCover', label: 'explicit cover', options: ['true', 'false'] },
+  { key: 'hascover', label: 'has cover', options: ['true', 'false'] },
   { key: 'hasspotify', label: 'has spotify', options: ['true', 'false'] },
   { key: 'hasmedia', label: 'has media', options: ['true', 'false'] },
   { key: 'haslyricslrc', label: 'has lyrics lrc', options: ['true', 'false'] },
