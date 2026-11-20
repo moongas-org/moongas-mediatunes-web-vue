@@ -250,8 +250,14 @@ seek, volume, a link to the Spotify track, and disconnect controls. Starting
 Spotify pauses local audio and starting local audio pauses Spotify. Spotify
 does not autoplay or trigger continuous shuffle; existing Previous/Next buttons
 still select mediatunes tracks. Name That Tune hides the Spotify panel until
-details are revealed. Track changes and leaving the page disconnect the old
-Spotify device.
+details are revealed, unless Spotify is needed because local playback is unavailable.
+Track changes pause Spotify and reset its playback controls, but reuse the same
+SDK device, including while the next track's sources load. Leaving the player
+or disconnecting Spotify releases the device. Rejected access tokens are refreshed
+and playback is retried once. If Spotify reports a missing device, the player
+refreshes authentication and reconnects the SDK without requiring sign-out;
+press **Play** again after the reconnection notice. Errors report both the HTTP
+status and Spotify's error status when they differ.
 
 Track YAML, Album YAML, and Artist YAML buttons alongside Lyrics/LRC display
 available text fetched through `/getfile`. The track uses its YAML path;

@@ -3,11 +3,12 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   loadSpotifySDK, spotifyAccessToken, spotifyAuth, spotifyLoginUrl,
+  spotifyPlaybackRequest, SpotifyPlaybackError,
   type SpotifyPlayer, type SpotifyState,
 } from '../spotify'
 import spotifyLogoUrl from '../assets/svg/Spotify_icon.svg'
 
-const props = defineProps<{ trackId: string }>()
+const props = defineProps<{ trackId?: string }>()
 const emit = defineEmits<{ playing: []; started: []; progress: [seconds: number] }>()
 const route = useRoute()
 const router = useRouter()
@@ -28,7 +29,7 @@ let lyricsTimer: ReturnType<typeof setInterval> | undefined
 let stateTime = 0
 let statePosition = 0
 let cancelConnection: (() => void) | undefined
-const playbackController = new AbortController()
+let playbackController = new AbortController()
 const uri = computed(() => `spotify:track:${props.trackId}`)
 const loginUrl = computed(() => spotifyLoginUrl(router.resolve(route.fullPath).href))
 watch(position, (ms) => emit('progress', ms / 1000), { flush: 'sync' })
@@ -60,6 +61,7 @@ onMounted(checkStatus)
 
 function updateState(state: SpotifyState | null): void {
   if (!active) return
+  if (state && state.track_window.current_track.uri !== uri.value) return
   const playing = Boolean(state && !state.paused)
   if (playing && !isPlaying.value) emit('playing')
   if (playing) emit('started')
@@ -163,7 +165,21 @@ async function connect(): Promise<SpotifyPlayer | undefined> {
   return next
 }
 
+watch(() => props.trackId, () => {
+  playbackController.abort()
+  playbackController = new AbortController()
+  void pause()
+  isPlaying.value = false
+  position.value = 0
+  duration.value = 0
+  statePosition = 0
+  error.value = null
+}, { flush: 'sync' })
+
 async function togglePlayback(): Promise<void> {
+  if (busy.value || !props.trackId) return
+  const selectedUri = uri.value
+  const signal = playbackController.signal
   busy.value = true
   error.value = null
   try {
@@ -174,9 +190,9 @@ async function togglePlayback(): Promise<void> {
     // Must be invoked during the click, before any token or SDK network request.
     const current = player
     await current.activateElement()
-    if (!active || player !== current) return
+    if (!active || signal.aborted || player !== current) return
     const state = await current.getCurrentState()
-    if (!active || player !== current) return
+    if (!active || signal.aborted || player !== current) return
     if (state?.track_window.current_track.uri === uri.value && state.position < state.duration) {
       if (state.paused) {
         emit('playing')
@@ -185,24 +201,41 @@ async function togglePlayback(): Promise<void> {
         await current.pause()
       }
     } else {
-      const token = await spotifyAccessToken()
       if (!active || player !== current || !deviceId) return
+      const selectedDevice = deviceId
       emit('playing')
-      const response = await fetch(`https://api.spotify.com/v1/me/player/play?${new URLSearchParams({ device_id: deviceId })}`, {
-        method: 'PUT',
-        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ uris: [uri.value] }),
-        signal: playbackController.signal,
+      await spotifyPlaybackRequest((token) => {
+        signal.throwIfAborted()
+        return fetch(`https://api.spotify.com/v1/me/player/play?${new URLSearchParams({ device_id: selectedDevice })}`, {
+          method: 'PUT',
+          headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+          body: JSON.stringify({ uris: [selectedUri] }),
+          signal,
+        })
       })
-      if (!response.ok) throw new Error(`Spotify playback failed (${response.status}). Check your Premium account, app access, and track availability.`)
     }
   } catch (reason) {
-    if (active) {
+    if (active && !signal.aborted) {
       error.value ??= message(reason)
       disconnect()
+      if (reason instanceof SpotifyPlaybackError && reason.spotifyStatus === 404
+        && /device not found/i.test(reason.message)) {
+        await reconnectDevice()
+      }
     }
   } finally {
     if (active) busy.value = false
+  }
+}
+
+async function reconnectDevice(): Promise<void> {
+  try {
+    await spotifyAccessToken(true)
+    if (!active) return
+    await connect()
+    if (active) error.value = 'Spotify device reconnected. Press Play to retry.'
+  } catch (reason) {
+    if (active) error.value = `Unable to reconnect Spotify device. ${message(reason)}`
   }
 }
 

@@ -214,7 +214,10 @@ export function createSpotifyHandler(options: SpotifyOptions) {
         }, 401);
       }
       try {
-        if ((session.tokenExpires ?? 0) <= now + 60000) {
+        if (
+          (url.searchParams.get("forceRefresh") === "1" ||
+            (session.tokenExpires ?? 0) <= now + 60000)
+        ) {
           if (!session.refreshToken) {
             session.accessToken = undefined;
             session.error = "Spotify login expired. Please reconnect Spotify.";

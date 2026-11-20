@@ -104,6 +104,52 @@ export async function spotifyAuth<T>(endpoint: string, method = 'GET'): Promise<
   return data as T
 }
 
-export async function spotifyAccessToken(): Promise<string> {
-  return (await spotifyAuth<{ accessToken: string }>('token')).accessToken
+export async function spotifyAccessToken(forceRefresh = false): Promise<string> {
+  const endpoint = forceRefresh ? 'token?forceRefresh=1' : 'token'
+  return (await spotifyAuth<{ accessToken: string }>(endpoint)).accessToken
+}
+
+export class SpotifyPlaybackError extends Error {
+  readonly httpStatus: number
+  readonly spotifyStatus: number
+
+  constructor(
+    httpStatus: number,
+    spotifyStatus: number,
+    detail: string,
+  ) {
+    super(`Spotify playback failed (HTTP ${httpStatus}, Spotify ${spotifyStatus}): ${detail}`)
+    this.httpStatus = httpStatus
+    this.spotifyStatus = spotifyStatus
+  }
+}
+
+async function playbackError(response: Response): Promise<SpotifyPlaybackError> {
+  let data: unknown
+  try {
+    data = await response.json()
+  } catch (reason) {
+    if (!(reason instanceof SyntaxError)) throw reason
+  }
+  const error = typeof data === 'object' && data !== null && 'error' in data
+    ? data.error : undefined
+  const status = typeof error === 'object' && error !== null && 'status' in error
+    && typeof error.status === 'number' ? error.status : response.status
+  const detail = typeof error === 'object' && error !== null && 'message' in error
+    && typeof error.message === 'string'
+    ? error.message
+    : 'Check your Premium account, app access, and track availability.'
+  return new SpotifyPlaybackError(response.status, status, detail)
+}
+
+/** Spotify can return HTTP 404 with an authentication error in the response body. */
+export async function spotifyPlaybackRequest(
+  request: (token: string) => Promise<Response>,
+): Promise<void> {
+  const response = await request(await spotifyAccessToken())
+  if (response.ok) return
+  const failure = await playbackError(response)
+  if (failure.httpStatus !== 401 && failure.spotifyStatus !== 401) throw failure
+  const retry = await request(await spotifyAccessToken(true))
+  if (!retry.ok) throw await playbackError(retry)
 }

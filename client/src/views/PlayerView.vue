@@ -145,6 +145,10 @@ const spotifyVisible = computed(() =>
   !hintsMode.value || hintsRevealed.value
   || (!localEnabled.value || (!sourcesLoading.value && !mediaPath.value)),
 )
+const spotifyInitialized = ref(false)
+watch(() => spotifyVisible.value && Boolean(spotifyTrack.value.trackId), (visible) => {
+  if (visible) spotifyInitialized.value = true
+}, { immediate: true })
 const slideTrackInfo = computed(() => route.query.slideTrackInfo === '1')
 const trackInfoFadeDelayError = computed(() => {
   const value = route.query.trackInfoFadeDelay
@@ -723,18 +727,17 @@ function onEnded(): void {
         @playing="onLocalPlaying"
         @progress="updateKaraokePosition('local', $event)"
       />
-      <template v-if="spotifyVisible">
+      <div v-show="spotifyVisible && spotifyTrack.trackId">
         <SpotifyPlayer
-          v-if="spotifyTrack.trackId"
-          :key="spotifyTrack.trackId"
+          v-if="spotifyInitialized"
           ref="spotifyRef"
-          :track-id="spotifyTrack.trackId"
+          :track-id="spotifyTrack.trackId ?? undefined"
           @playing="playerRef?.pause()"
           @started="startKaraoke('spotify')"
           @progress="updateKaraokePosition('spotify', $event)"
         />
-        <div v-if="spotifyTrack.error" class="error" role="alert">{{ spotifyTrack.error }}</div>
-      </template>
+      </div>
+      <div v-if="spotifyVisible && spotifyTrack.error" class="error" role="alert">{{ spotifyTrack.error }}</div>
       <div v-if="karaokeAvailable" class="player-display-options">
         <label class="karaoke-option">
           <input v-model="karaokeMode" type="checkbox" :disabled="hintsMode && !hintsRevealed" />

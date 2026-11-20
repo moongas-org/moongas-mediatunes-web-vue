@@ -91,6 +91,35 @@ test('refreshes expiring tokens once for concurrent SDK requests', async () => {
   assert.equal(refreshes, 1)
 })
 
+test('force-refreshes a still-valid access token after Spotify rejects it', async () => {
+  let tokenRequests = 0
+  const handler = createSpotifyHandler({
+    basePath: '/mediatunes', clientId: 'test-client', clientSecret: 'test-secret',
+    fetch: async (_input, init) => {
+      const body = new URLSearchParams(String(init?.body))
+      if (body.get('grant_type') === 'refresh_token') {
+        tokenRequests++
+        return Response.json({ access_token: 'fresh-access', expires_in: 3600 })
+      }
+      return Response.json({
+        access_token: 'initial-access',
+        refresh_token: 'refresh',
+        expires_in: 3600,
+      })
+    },
+  })
+  const { cookie, state } = await login(handler)
+  await handler(new Request(`${base}/callback?state=${state}&code=test-code`, { headers: { cookie } }))
+
+  const refreshed = await handler(new Request(`${base}/token?forceRefresh=1`, { headers: { cookie } }))
+  assert.deepEqual(await refreshed.json(), { accessToken: 'fresh-access' })
+  assert.equal(tokenRequests, 1)
+
+  const token = await handler(new Request(`${base}/token`, { headers: { cookie } }))
+  assert.deepEqual(await token.json(), { accessToken: 'fresh-access' })
+  assert.equal(tokenRequests, 1)
+})
+
 test('reports declined login, rejects open redirects and cross-origin access, and handles missing configuration', async () => {
   const handler = createSpotifyHandler({ basePath: '/mediatunes', clientId: 'id', clientSecret: 'secret' })
   assert.equal((await handler(new Request(`${base}/login?returnTo=https://evil.example`))).status, 400)
