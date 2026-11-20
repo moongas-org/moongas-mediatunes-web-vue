@@ -79,6 +79,8 @@ The player and Name That Tune select metadata via `/api/random-track`, then
 look up the selected track's ID in `/api/tracks` and request
 `/api/mediafiles?trackid=<id>` and `/api/trackstreaming?trackid=<id>`.
 Name That Tune skips candidates with neither media files nor streaming sources.
+It preserves all selected filters when retrying repeated or unavailable tracks.
+After ten unsuccessful attempts it reports an error instead of removing filters.
 When local playback is unavailable, an available Spotify player is shown before
 the answer is revealed.
 The single-column **Track Sources** table below the player buttons and above

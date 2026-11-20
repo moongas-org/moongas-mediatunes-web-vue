@@ -57,6 +57,7 @@ export async function loadNextTrack(
   randomTrack: (query: LocationQuery) => Promise<TrackInfo>,
   isCurrent: () => boolean,
   isEligible?: (track: TrackInfo, isCurrent: () => boolean) => Promise<boolean>,
+  relaxFilters = true,
 ): Promise<TrackSelection | null> {
   const filters: LocationQuery = { ...query }
   delete filters.hints
@@ -74,8 +75,10 @@ export async function loadNextTrack(
     (key) => key !== 'title' && key !== 'album',
   )].filter((key) => key in filters)
   let unfilteredAttempts = 0
+  let filteredAttempts = 0
 
   while (isCurrent()) {
+    filteredAttempts++
     if (Object.keys(filters).length === 0) unfilteredAttempts++
     const next = await randomTrack({ ...filters })
     if (!isCurrent()) return null
@@ -83,6 +86,15 @@ export async function loadNextTrack(
       const eligible = !isEligible || await isEligible(next, isCurrent)
       if (!isCurrent()) return null
       if (eligible) return { track: next, query: filters }
+    }
+
+    if (!relaxFilters) {
+      if (filteredAttempts >= MAX_UNFILTERED_ATTEMPTS) {
+        throw new Error(
+          `No different eligible track found after ${MAX_UNFILTERED_ATTEMPTS} attempts with the selected filters. Change the filters or try Next again.`,
+        )
+      }
+      continue
     }
 
     const key = keys.shift()

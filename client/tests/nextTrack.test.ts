@@ -97,6 +97,34 @@ test('stale eligibility checks neither return a track nor continue relaxing filt
   assert.equal(calls, 1)
 })
 
+test('Name That Tune preserves the year range across repeats and unavailable candidates', async () => {
+  const filters = { minYear: '1980', maxYear: '1989' }
+  const unavailable = { ...other, path: '/unavailable.yml' }
+  const candidates = [current, unavailable, other]
+  let calls = 0
+  const result = await loadNextTrack(filters, current.path, async (query) => {
+    assert.deepEqual(query, filters)
+    return candidates[calls++]
+  }, active, async (candidate) => candidate.path !== unavailable.path, false)
+  assert.equal(result?.track, other)
+  assert.deepEqual(result?.query, filters)
+  assert.equal(calls, 3)
+})
+
+test('Name That Tune reports exhausted retries without dropping any filters', async () => {
+  for (const candidate of [current, other]) {
+    const filters = { minYear: '1980', maxYear: '1989' }
+    let calls = 0
+    await assert.rejects(loadNextTrack(filters, current.path, async (query) => {
+      calls++
+      assert.deepEqual(query, filters)
+      return candidate
+    }, active, async () => false, false), /10 attempts with the selected filters/)
+    assert.equal(calls, 10)
+    assert.deepEqual(filters, { minYear: '1980', maxYear: '1989' })
+  }
+})
+
 test('removes title, then album, then every remaining filter without mutating the URL', async () => {
   const query = {
     artist: 'Artist', album: 'Album', title: 'Current',

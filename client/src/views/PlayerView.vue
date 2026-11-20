@@ -265,6 +265,7 @@ async function loadRandomTrack(autoplay: boolean): Promise<void> {
       api.randomTrack,
       () => requestId === trackRequestId,
       hintsMode.value ? hasPlaybackSource : undefined,
+      !hintsMode.value,
     )
     if (!selection || requestId !== trackRequestId) return
     const { track: next, query } = selection
