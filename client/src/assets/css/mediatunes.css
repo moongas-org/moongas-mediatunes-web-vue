@@ -359,3 +359,13 @@ input[type=checkbox]
 .button-link:hover {
   background-color: #7b3f3f;
 }
+
+.playback-toggle {
+  box-sizing: border-box;
+  max-width: calc(100% - 4px);
+  padding-inline: min(28px, 10%);
+}
+
+.playback-toggle .bi {
+  font-size: 2em;
+}

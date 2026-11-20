@@ -307,12 +307,22 @@ defineExpose({ pause })
     <p v-if="checking" role="status">Checking Spotify connection...</p>
     <template v-else-if="authenticated">
       <div class="spotify-controls">
-        <button class="button-link" :disabled="busy" :aria-label="isPlaying ? 'Pause Spotify' : 'Play Spotify'" @click="togglePlayback">
-          {{ isPlaying ? 'Pause' : 'Play' }}
+        <button
+          class="button-link playback-toggle"
+          :disabled="busy"
+          :aria-label="isPlaying ? 'Pause Spotify' : 'Play Spotify'"
+          :title="isPlaying ? 'Pause Spotify' : 'Play Spotify'"
+          @click="togglePlayback"
+        >
+          <i :class="isPlaying ? 'bi bi-pause-circle-fill' : 'bi bi-play-circle-fill'" aria-hidden="true"></i>
         </button>
-        <span>{{ formatTime(position) }} / {{ formatTime(duration) }}</span>
-        <input type="range" aria-label="Spotify playback position" min="0" :max="duration" :value="position" :disabled="!duration || busy" @change="seek" />
-        <label>Volume <input type="range" aria-label="Spotify volume" min="0" max="1" step="0.01" :value="volume" @input="changeVolume" /></label>
+        <span class="spotify-time">{{ formatTime(position) }}</span>
+        <input class="spotify-progress" type="range" aria-label="Spotify playback position" min="0" :max="duration" :value="position" :disabled="!duration || busy" @change="seek" />
+        <span class="spotify-time">{{ formatTime(duration) }}</span>
+        <label>
+          <i class="bi bi-volume-up-fill" aria-hidden="true"></i>
+          <input type="range" aria-label="Spotify volume" min="0" max="1" step="0.01" :value="volume" @input="changeVolume" />
+        </label>
       </div>
       <p v-if="busy" role="status">Connecting to Spotify...</p>
       <button class="button-link" :disabled="busy" @click="logout">Disconnect Spotify</button>
@@ -352,7 +362,21 @@ defineExpose({ pause })
 }
 
 .spotify-controls {
+  justify-content: flex-start;
   flex-wrap: wrap;
+}
+
+.spotify-progress {
+  flex: 1;
+  min-width: min(80px, 100%);
+}
+
+.spotify-time {
+  font-variant-numeric: tabular-nums;
+}
+
+.spotify-controls label {
+  max-width: 100%;
 }
 
 .spotify-controls input {

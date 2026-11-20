@@ -719,7 +719,7 @@ function onEnded(): void {
                 >
                   <button
                     id="playBtn"
-                    class="button-link"
+                    class="button-link playback-toggle"
                     :aria-label="playerRef?.isPlaying ? 'Pause' : 'Play'"
                     :title="playerRef?.isPlaying ? 'Pause' : 'Play'"
                     :disabled="!audioSrc || !playerRef || playerRef.loading"
@@ -951,10 +951,6 @@ function onEnded(): void {
   display: block;
 }
 
-#playBtn .bi {
-  font-size: 2em;
-}
-
 .player-layout {
   border: 0;
   table-layout: fixed;
@@ -988,12 +984,6 @@ function onEnded(): void {
 .spotify-panel {
   display: flex;
   min-width: 0;
-}
-
-.player-playback #playBtn {
-  box-sizing: border-box;
-  max-width: calc(100% - 4px);
-  padding-inline: min(28px, 10%);
 }
 
 .yaml {

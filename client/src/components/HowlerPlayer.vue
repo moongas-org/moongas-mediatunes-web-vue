@@ -280,7 +280,7 @@ defineExpose({ togglePlayback, restart, pause, isPlaying, loading })
 .playback-row {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 8px;
 }
