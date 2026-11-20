@@ -22,17 +22,25 @@ const links: NavLink[] = [
   { label: 'tracks', path: '/tracks' },
 ]
 
-const selectedView = computed(() =>
-  links.some((link) => link.path === route.path) ? route.path : '',
-)
+const selectedView = computed(() => route.path.replace(/\/+$/, '') || '/')
+const viewLinks = computed(() => {
+  if (links.some((link) => link.path === selectedView.value)) return links
+  return [
+    ...links,
+    {
+      label: String(route.name ?? selectedView.value.slice(1)).replace(/-/g, ' '),
+      path: selectedView.value,
+    },
+  ]
+})
 
 function changeView(event: Event): void {
   const select = event.target
   if (!(select instanceof HTMLSelectElement)) return
   const path = select.value
   select.value = selectedView.value
-  if (path === route.path) return
-  if (route.path === '/player') {
+  if (path === selectedView.value) return
+  if (selectedView.value === '/player') {
     window.open(router.resolve(path).href, '_blank', 'noopener,noreferrer')
   } else {
     void router.push(path)
@@ -61,8 +69,7 @@ function yearQuery(y: number): LocationQueryRaw {
           <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/>
         </svg>
         <select :value="selectedView" aria-label="View" @change="changeView">
-          <option value="" disabled>Select a view</option>
-          <option v-for="link in links" :key="link.path" :value="link.path">
+          <option v-for="link in viewLinks" :key="link.path" :value="link.path">
             {{ link.label }}
           </option>
         </select>

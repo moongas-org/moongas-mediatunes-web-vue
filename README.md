@@ -306,6 +306,8 @@ Examples:
 
 On views with filters, the **Add filter** control is next to the view selector
 in the header ribbon. Filter chips still appear in the page content.
+The view selector always displays the active view, including detail and artist
+geography views. Adding or removing filters does not change its selection.
 
 On the Tracks view, the `title` query parameter is available as the `title`
 filter.

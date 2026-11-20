@@ -29,7 +29,7 @@ type ValueHintKey = 'year' | 'country' | 'region' | 'city' | 'cover'
 const VALUE_HINTS: { key: ValueHintKey; label: string; id: string; icon: string }[] = [
   { key: 'year', label: 'Year', id: 'Year', icon: 'bi-calendar-event-fill' },
   { key: 'country', label: 'Country', id: 'Country', icon: 'bi-globe-americas' },
-  { key: 'region', label: 'Region', id: 'Region', icon: 'bi-map-fill' },
+  { key: 'region', label: 'Region', id: 'Region', icon: 'bi-geo-alt' },
   { key: 'city', label: 'City', id: 'City', icon: 'bi-buildings-fill' },
   { key: 'cover', label: 'Album Cover (Blurred)', id: 'Cover', icon: 'bi-images' },
 ]
