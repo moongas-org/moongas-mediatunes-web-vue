@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../api'
 import AlbumCover from '../components/AlbumCover.vue'
 import QueryFilters from '../components/QueryFilters.vue'
 import { useGeoFilterFields } from '../data/geoFilters'
-import { configState } from '../configStore'
 import { GENRES } from '../data/genres'
-import { formatResults } from '../utils/format'
 import LoadingSpinner from '../components/LoadingSpinner.vue'
 import type { AlbumInfo, FilterField } from '../types'
 
@@ -58,8 +56,6 @@ const filterFields: FilterField[] = [
   ...useGeoFilterFields(),
 ]
 
-const maxResults = computed(() => configState.config?.maxResultsAlbumCovers ?? 500)
-
 const MIN_COLUMNS = 1
 const MAX_COLUMNS = 7
 const columns = ref(5)
@@ -80,7 +76,9 @@ const showCaptions = ref(false)
     <QueryFilters :fields="filterFields" />
 
     <div class="results-info">
-      <template v-if="!loading && !error">{{ formatResults(albums.length, maxResults) }}</template>
+      <template v-if="!loading && !error"
+        >{{ albums.length.toLocaleString('en-US') }} {{ albums.length === 1 ? 'result' : 'results' }}</template
+      >
       <router-link class="button-link" aria-label="Shuffle" title="Shuffle" :to="{ path: '/player', query: route.query }"
         ><i class="bi bi-shuffle" aria-hidden="true"></i></router-link
       >
