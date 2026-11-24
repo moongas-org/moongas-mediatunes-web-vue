@@ -13,7 +13,7 @@ const server = await createServer({
 })
 after(() => server.close())
 
-test('genre and album artist columns are hidden only for multiple albums', async (t) => {
+test('tracks table excludes genre and album artist columns for all results', async (t) => {
   Object.defineProperty(globalThis, 'document', { value: { cookie: '' }, configurable: true })
   t.after(() => { Reflect.deleteProperty(globalThis, 'document') })
   const { api } = await server.ssrLoadModule('/src/api.ts')
@@ -67,10 +67,7 @@ test('genre and album artist columns are hidden only for multiple albums', async
     const table = html.match(/<table\b[\s\S]*?<\/table>/)?.[0]
     assert.ok(table)
     const headers = [...table.matchAll(/<th\b[^>]*>([^<]*)<\/th>/g)].map((match) => match[1])
-    const multiple = index === 2 || index === 3 || index === 5
-    assert.deepEqual(headers, multiple
-      ? ['Year', 'Artist', 'Album', 'Title']
-      : ['Year', 'Genre', 'Artist', 'Album Artist', 'Album', 'Title'])
+    assert.deepEqual(headers, ['Year', 'Artist', 'Album', 'Title'])
     const rows = [...table.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/g)].slice(1)
     assert.equal(rows.length, files.length)
     for (const row of rows) assert.equal((row[1].match(/<td\b/g) ?? []).length, headers.length)

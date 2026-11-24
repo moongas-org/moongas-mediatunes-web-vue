@@ -80,13 +80,11 @@ const shuffleAlbumQuery = computed<LocationQueryRaw | null>(() => {
   return null
 })
 
-const hasMultipleAlbums = computed(() => {
-  const albums = new Set(files.value.map((f) => JSON.stringify([f.albumartist || f.artist, f.album])))
-  return albums.size > 1
-})
-
 /** True when every listed track belongs to the same album, so its cover (and metadata) applies. */
-const isSingleAlbum = computed(() => files.value.length > 0 && !hasMultipleAlbums.value)
+const isSingleAlbum = computed(() => {
+  const albums = new Set(files.value.map((f) => JSON.stringify([f.albumartist || f.artist, f.album])))
+  return albums.size === 1
+})
 
 /** Artist/album for the single album shown (falls back to the listed tracks' artist). */
 const singleAlbum = computed<{ artist: string; album: string } | null>(() => {
@@ -138,9 +136,7 @@ const singleAlbum = computed<{ artist: string; album: string } | null>(() => {
           <thead>
             <tr>
               <th scope="col">Year</th>
-              <th v-if="!hasMultipleAlbums" scope="col">Genre</th>
               <th scope="col">Artist</th>
-              <th v-if="!hasMultipleAlbums" scope="col">Album Artist</th>
               <th scope="col">Album</th>
               <th scope="col">Title</th>
             </tr>
@@ -152,11 +148,6 @@ const singleAlbum = computed<{ artist: string; album: string } | null>(() => {
                   file.year
                   }}</router-link>
               </td>
-              <td v-if="!hasMultipleAlbums">
-                <router-link :to="{ path: '/artists', query: { genre: file.genre } }">{{
-                  file.genre
-                  }}</router-link>
-              </td>
               <td>
                 <!-- 
                   Linking to the artist view would currently 404 on some artists because 
@@ -165,11 +156,6 @@ const singleAlbum = computed<{ artist: string; album: string } | null>(() => {
                 -->
                 <router-link :to="{ path: '/artists', query: { artist: file.artist } }">{{
                   file.artist
-                  }}</router-link>
-              </td>
-              <td v-if="!hasMultipleAlbums">
-                <router-link v-if="file.albumartist"
-                  :to="{ path: '/artists', query: { albumartist: file.albumartist } }">{{ file.albumartist
                   }}</router-link>
               </td>
               <td>
